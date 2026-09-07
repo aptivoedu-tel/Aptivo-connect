@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import {
@@ -25,6 +25,13 @@ import {
   Linkedin,
   Globe,
   Award,
+  Upload,
+  UserPlus,
+  UserCheck,
+  Clock,
+  UserMinus,
+  MessageSquare,
+  Users,
 } from 'lucide-react';
 import { calculateProfileCompletion, ProfileCompletionResult } from '@/lib/profileUtils';
 
@@ -85,11 +92,45 @@ const PRESET_INTERESTS_PRO = [
   'Advisory',
 ];
 
+interface ConnectedUser {
+  _id: string;
+  fullName?: string;
+  name?: string;
+  email: string;
+  role?: string;
+  avatarUrl?: string;
+  profilePhoto?: string;
+  university?: string;
+  degree?: string;
+  jobTitle?: string;
+  organization?: string;
+  bio?: string;
+  skills?: string[];
+}
+
+interface LinkRecord {
+  _id: string;
+  requester: ConnectedUser;
+  recipient: ConnectedUser;
+  status: string;
+  note?: string;
+  createdAt: string;
+}
+
 export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
-  const [activeTab, setActiveTab] = useState<'edit' | 'preview'>('edit');
+  const [activeTab, setActiveTab] = useState<'edit' | 'preview' | 'links'>('edit');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [avatarUploadMsg, setAvatarUploadMsg] = useState<string | null>(null);
+
+  // Authenticated vs Profile User
+  const [currentLoggedInEmail, setCurrentLoggedInEmail] = useState('');
+  const [currentLoggedInUserId, setCurrentLoggedInUserId] = useState('');
+  const [isSelf, setIsSelf] = useState(true);
+  const [profileUserId, setProfileUserId] = useState('');
 
   // User Profile State
   const [userEmail, setUserEmail] = useState('');
@@ -133,11 +174,22 @@ export default function ProfilePage() {
     meetingsCount: 0,
     projectsCount: 0,
     experiencesCount: 0,
-    accessCount: 0,
   });
 
-  const [verifiedProjects, setVerifiedProjects] = useState<any[]>([]);
-  const [verifiedExperiences, setVerifiedExperiences] = useState<any[]>([]);
+  const [verifiedProjects, setVerifiedProjects] = useState<unknown[]>([]);
+  const [verifiedExperiences, setVerifiedExperiences] = useState<unknown[]>([]);
+
+  // Links state
+  const [connectionState, setConnectionState] = useState<'none' | 'pending_outgoing' | 'pending_incoming' | 'accepted'>('none');
+  const [activeLinkId, setActiveLinkId] = useState<string | null>(null);
+  const [linkActionLoading, setLinkActionLoading] = useState(false);
+  const [linkNote, setLinkNote] = useState('');
+  const [showNoteModal, setShowNoteModal] = useState(false);
+  const [linksList, setLinksList] = useState<{
+    accepted: LinkRecord[];
+    pendingIncoming: LinkRecord[];
+    pendingOutgoing: LinkRecord[];
+  }>({ accepted: [], pendingIncoming: [], pendingOutgoing: [] });
 
   // Completion stats
   const [completion, setCompletion] = useState<ProfileCompletionResult>({
@@ -146,17 +198,17 @@ export default function ProfilePage() {
     isComplete: false,
   });
 
-  const fetchProfile = async (emailOverride?: string) => {
-    const emailToFetch = emailOverride || userEmail;
-    if (!emailToFetch) {
+  const fetchProfile = async (targetEmail: string, loggedInEmail: string) => {
+    if (!targetEmail) {
       setLoading(false);
       return;
     }
     try {
-      const res = await fetch(`/api/profile?email=${encodeURIComponent(emailToFetch)}`);
+      const res = await fetch(`/api/profile?email=${encodeURIComponent(targetEmail)}`);
       const data = await res.json();
       if (data.user) {
         const u = data.user;
+        setProfileUserId(u._id);
         setUserEmail(u.email);
         setFullName(u.fullName || u.name || '');
         setAccountType(u.accountType || u.role || 'student');
@@ -194,12 +246,21 @@ export default function ProfilePage() {
           meetingsCount: u.meetingsCount || 0,
           projectsCount: u.projectsCount || 0,
           experiencesCount: u.experiencesCount || 0,
-          accessCount: u.accessCount || 0,
         });
 
         if (data.activity?.projects) setVerifiedProjects(data.activity.projects);
         if (data.activity?.experiences) setVerifiedExperiences(data.activity.experiences);
         if (data.completion) setCompletion(data.completion);
+
+        // Fetch link relationship if viewing another user
+        if (loggedInEmail && targetEmail.toLowerCase() !== loggedInEmail.toLowerCase()) {
+          setIsSelf(false);
+          setActiveTab('preview');
+          fetchLinkStatus(loggedInEmail, u._id);
+        } else {
+          setIsSelf(true);
+          fetchUserLinks(u._id);
+        }
       }
     } catch (e) {
       console.error(e);
@@ -208,25 +269,178 @@ export default function ProfilePage() {
     }
   };
 
+  const fetchLinkStatus = async (loggedInEmail: string, otherUserId: string) => {
+    try {
+      const res = await fetch(`/api/links?email=${encodeURIComponent(loggedInEmail)}&targetUserId=${otherUserId}`);
+      const data = await res.json();
+      if (data.connectionState) {
+        setConnectionState(data.connectionState);
+        if (data.link?._id) setActiveLinkId(data.link._id);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const fetchUserLinks = async (userId: string) => {
+    try {
+      const res = await fetch(`/api/links?userId=${userId}`);
+      const data = await res.json();
+      if (data.accepted || data.pendingIncoming || data.pendingOutgoing) {
+        setLinksList({
+          accepted: data.accepted || [],
+          pendingIncoming: data.pendingIncoming || [],
+          pendingOutgoing: data.pendingOutgoing || [],
+        });
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   useEffect(() => {
-    let email = '';
+    let loggedInEmail = '';
+    let loggedInId = '';
+    let targetEmail = '';
+
     if (typeof window !== 'undefined') {
       try {
+        const stored = JSON.parse(localStorage.getItem('aptivo_user') || '{}');
+        loggedInEmail = stored.email || '';
+        loggedInId = stored._id || '';
+        setCurrentLoggedInEmail(loggedInEmail);
+        setCurrentLoggedInUserId(loggedInId);
+
         const urlParams = new URLSearchParams(window.location.search);
-        email = urlParams.get('email') || '';
-        if (!email) {
-          const stored = JSON.parse(localStorage.getItem('aptivo_user') || '{}');
-          email = stored.email || '';
-        }
+        targetEmail = urlParams.get('email') || loggedInEmail;
       } catch {}
     }
-    if (email) {
-      setUserEmail(email);
-      fetchProfile(email);
+
+    if (targetEmail) {
+      fetchProfile(targetEmail, loggedInEmail);
     } else {
       setLoading(false);
     }
   }, []);
+
+  const handleAvatarFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingAvatar(true);
+    setAvatarUploadMsg(null);
+
+    const formData = new FormData();
+    formData.append('file', file);
+    if (userEmail) formData.append('email', userEmail);
+    if (profileUserId) formData.append('userId', profileUserId);
+
+    try {
+      const res = await fetch('/api/avatar/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.success && data.avatarUrl) {
+        setProfilePhoto(data.avatarUrl);
+        setAvatarUploadMsg('Photo uploaded and stored securely!');
+        // Update local storage user if self
+        if (isSelf && typeof window !== 'undefined') {
+          try {
+            const stored = JSON.parse(localStorage.getItem('aptivo_user') || '{}');
+            stored.avatarUrl = data.avatarUrl;
+            stored.profilePhoto = data.avatarUrl;
+            localStorage.setItem('aptivo_user', JSON.stringify(stored));
+          } catch {}
+        }
+      } else {
+        setAvatarUploadMsg(data.error || 'Upload failed');
+      }
+    } catch {
+      setAvatarUploadMsg('Failed to upload image. Please try again.');
+    } finally {
+      setUploadingAvatar(false);
+      setTimeout(() => setAvatarUploadMsg(null), 3000);
+    }
+  };
+
+  const handleSendLinkRequest = async () => {
+    if (!currentLoggedInEmail || !profileUserId) return;
+    setLinkActionLoading(true);
+    try {
+      const res = await fetch('/api/links', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          requesterEmail: currentLoggedInEmail,
+          recipientId: profileUserId,
+          note: linkNote,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setConnectionState('pending_outgoing');
+        setActiveLinkId(data.link?._id || null);
+        setShowNoteModal(false);
+        setLinkNote('');
+      } else {
+        alert(data.error || 'Could not send connection request');
+      }
+    } catch {
+      alert('Error sending connection request');
+    } finally {
+      setLinkActionLoading(false);
+    }
+  };
+
+  const handleRespondLink = async (action: 'accept' | 'decline' | 'cancel', linkIdToUse?: string) => {
+    const id = linkIdToUse || activeLinkId;
+    if (!id) return;
+    setLinkActionLoading(true);
+    try {
+      const res = await fetch(`/api/links/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action,
+          userEmail: currentLoggedInEmail,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        if (action === 'accept') {
+          setConnectionState('accepted');
+        } else if (action === 'decline' || action === 'cancel') {
+          setConnectionState('none');
+        }
+        if (profileUserId) fetchUserLinks(profileUserId);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLinkActionLoading(false);
+    }
+  };
+
+  const handleRemoveLink = async (linkIdToUse?: string) => {
+    const id = linkIdToUse || activeLinkId;
+    if (!id) return;
+    if (!confirm('Are you sure you want to disconnect from this builder?')) return;
+    setLinkActionLoading(true);
+    try {
+      const res = await fetch(`/api/links/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        setConnectionState('none');
+        setActiveLinkId(null);
+        if (profileUserId) fetchUserLinks(profileUserId);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLinkActionLoading(false);
+    }
+  };
 
   const handleAddSkill = (skill: string) => {
     const trimmed = skill.trim();
@@ -288,6 +502,18 @@ export default function ProfilePage() {
       if (data.success) {
         setSaveSuccess(true);
         if (data.completion) setCompletion(data.completion);
+        if (typeof window !== 'undefined') {
+          try {
+            const stored = JSON.parse(localStorage.getItem('aptivo_user') || '{}');
+            stored.fullName = fullName;
+            stored.name = fullName;
+            stored.university = university;
+            stored.degree = degree;
+            stored.profilePhoto = profilePhoto;
+            stored.avatarUrl = profilePhoto;
+            localStorage.setItem('aptivo_user', JSON.stringify(stored));
+          } catch {}
+        }
         setTimeout(() => setSaveSuccess(false), 2500);
       }
     } catch (e) {
@@ -298,7 +524,7 @@ export default function ProfilePage() {
   };
 
   if (loading) {
-    return <div className="py-12 text-center text-slate-400 text-sm">Loading your profile...</div>;
+    return <div className="py-12 text-center text-slate-400 text-sm">Loading profile...</div>;
   }
 
   return (
@@ -311,41 +537,174 @@ export default function ProfilePage() {
               {accountType === 'student' ? 'Student Identity' : 'Industry Professional'}
             </span>
             <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 text-xs font-semibold">
-              {city || 'Karachi, PK'}
+              {city || 'Pakistan'}
             </span>
+            {linksList.accepted.length > 0 && (
+              <span className="px-2.5 py-0.5 rounded-full bg-brand-50 text-brand-800 text-xs font-bold border border-brand-200">
+                {linksList.accepted.length} Links
+              </span>
+            )}
           </div>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-            {fullName || 'Student Profile'}
+            {fullName || 'Builder Profile'}
           </h2>
           <p className="text-xs text-slate-500 mt-1">
-            Central identity layer reused automatically across MEET, BUILD, EXPERIENCE, and ACCESS.
+            Central identity layer active across MEETUP, BUILD, EXPERIENCE, and SHOWCASE.
           </p>
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setActiveTab(activeTab === 'edit' ? 'preview' : 'edit')}
-            className={`inline-flex items-center gap-1.5 px-4 py-2.5 rounded-2xl text-xs font-bold border transition-all ${
-              activeTab === 'preview'
-                ? 'bg-slate-900 text-white border-slate-900'
-                : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50 shadow-xs'
-            }`}
-          >
-            <Eye className="w-4 h-4 text-brand-600" />
-            <span>{activeTab === 'preview' ? 'Back to Editor' : 'View Public Profile'}</span>
-          </button>
+        <div className="flex items-center gap-3 flex-wrap">
+          {!isSelf ? (
+            /* Connection Action for other users */
+            <div className="flex items-center gap-2">
+              {connectionState === 'none' && (
+                <button
+                  onClick={() => setShowNoteModal(true)}
+                  disabled={linkActionLoading}
+                  className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold shadow-md shadow-brand-600/20 transition-all"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  <span>Connect / Link</span>
+                </button>
+              )}
+              {connectionState === 'pending_outgoing' && (
+                <div className="flex items-center gap-1.5">
+                  <span className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold">
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>Request Pending</span>
+                  </span>
+                  <button
+                    onClick={() => handleRespondLink('cancel')}
+                    disabled={linkActionLoading}
+                    className="p-2.5 rounded-2xl border border-slate-200 text-slate-600 hover:text-rose-600 hover:bg-rose-50 text-xs font-bold transition-colors"
+                    title="Cancel Request"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+              {connectionState === 'pending_incoming' && (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleRespondLink('accept')}
+                    disabled={linkActionLoading}
+                    className="inline-flex items-center gap-1 px-4 py-2.5 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold shadow-md"
+                  >
+                    <UserCheck className="w-4 h-4" />
+                    <span>Accept Request</span>
+                  </button>
+                  <button
+                    onClick={() => handleRespondLink('decline')}
+                    disabled={linkActionLoading}
+                    className="px-3 py-2.5 rounded-2xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-bold"
+                  >
+                    Decline
+                  </button>
+                </div>
+              )}
+              {connectionState === 'accepted' && (
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    <span>Connected</span>
+                  </span>
+                  <button
+                    onClick={() => handleRemoveLink()}
+                    disabled={linkActionLoading}
+                    className="p-2 rounded-xl text-slate-400 hover:text-rose-600 text-xs"
+                    title="Disconnect"
+                  >
+                    <UserMinus className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            /* Self Actions */
+            <>
+              <button
+                onClick={() => setActiveTab(activeTab === 'links' ? 'edit' : 'links')}
+                className={`inline-flex items-center gap-1.5 px-4 py-2.5 rounded-2xl text-xs font-bold border transition-all ${
+                  activeTab === 'links'
+                    ? 'bg-slate-900 text-white border-slate-900'
+                    : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50 shadow-xs'
+                }`}
+              >
+                <Link2 className="w-4 h-4 text-brand-600" />
+                <span>My Network ({linksList.accepted.length})</span>
+                {linksList.pendingIncoming.length > 0 && (
+                  <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
+                )}
+              </button>
 
-          <button
-            onClick={handleSaveProfile}
-            disabled={saving}
-            className="inline-flex items-center gap-1.5 px-6 py-2.5 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold shadow-md shadow-brand-600/20 transition-all disabled:opacity-50"
-          >
-            <Save className="w-4 h-4" />
-            <span>{saving ? 'Saving...' : 'Save Changes'}</span>
-          </button>
+              <button
+                onClick={() => setActiveTab(activeTab === 'edit' ? 'preview' : 'edit')}
+                className={`inline-flex items-center gap-1.5 px-4 py-2.5 rounded-2xl text-xs font-bold border transition-all ${
+                  activeTab === 'preview'
+                    ? 'bg-slate-900 text-white border-slate-900'
+                    : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50 shadow-xs'
+                }`}
+              >
+                <Eye className="w-4 h-4 text-brand-600" />
+                <span>{activeTab === 'preview' ? 'Back to Editor' : 'Public Profile'}</span>
+              </button>
+
+              {activeTab === 'edit' && (
+                <button
+                  onClick={handleSaveProfile}
+                  disabled={saving}
+                  className="inline-flex items-center gap-1.5 px-6 py-2.5 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold shadow-md shadow-brand-600/20 transition-all disabled:opacity-50"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>{saving ? 'Saving...' : 'Save Changes'}</span>
+                </button>
+              )}
+            </>
+          )}
         </div>
       </div>
+
+      {/* Note Modal for Connection Request */}
+      {showNoteModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full border border-slate-100 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-extrabold text-slate-900">Connect with {fullName}</h3>
+              <button onClick={() => setShowNoteModal(false)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-xs text-slate-500">
+              Add a brief note about why you want to link (e.g. project collaboration, mutual interest).
+            </p>
+            <textarea
+              rows={3}
+              value={linkNote}
+              onChange={(e) => setLinkNote(e.target.value)}
+              placeholder="Hi! I'd love to connect and collaborate on..."
+              className="w-full p-3 rounded-2xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+            />
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowNoteModal(false)}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSendLinkRequest}
+                disabled={linkActionLoading}
+                className="px-5 py-2 rounded-xl bg-brand-600 text-white text-xs font-bold hover:bg-brand-700 shadow-sm"
+              >
+                {linkActionLoading ? 'Sending...' : 'Send Request'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {saveSuccess && (
         <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 font-bold flex items-center gap-2 animate-in zoom-in-95">
@@ -354,50 +713,226 @@ export default function ProfilePage() {
         </div>
       )}
 
-      {/* Profile Strength Widget */}
-      <div className="bg-gradient-to-r from-slate-900 via-darkpine-900 to-slate-950 rounded-3xl p-6 sm:p-8 text-white shadow-xl space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-brand-400" />
-              <span className="text-xs font-bold uppercase tracking-wider text-brand-300">
-                Aptivo Identity Strength
-              </span>
-            </div>
-            <h3 className="text-xl sm:text-2xl font-black">Profile {completion.score}% Complete</h3>
-            <p className="text-xs text-emerald-200/80 max-w-md">
-              A comprehensive profile increases your chance of acceptance into BUILD project teams and workplace tours.
-            </p>
-          </div>
-
-          <div className="bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/10 sm:w-64 shrink-0 space-y-2">
-            <div className="flex items-center justify-between text-xs font-bold">
-              <span>Strength</span>
-              <span className="text-brand-400">{completion.score}%</span>
-            </div>
-            <div className="w-full h-2.5 rounded-full bg-white/10 overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-brand-400 to-emerald-400 rounded-full transition-all duration-500"
-                style={{ width: `${completion.score}%` }}
-              />
-            </div>
-            {completion.suggestions.length > 0 && (
-              <p className="text-[10px] text-emerald-200/70 truncate">
-                Next: {completion.suggestions[0]}
+      {/* Profile Strength Banner (when in self view) */}
+      {isSelf && activeTab !== 'links' && (
+        <div className="bg-gradient-to-r from-slate-900 via-darkpine-900 to-slate-950 rounded-3xl p-6 sm:p-8 text-white shadow-xl space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-brand-400" />
+                <span className="text-xs font-bold uppercase tracking-wider text-brand-300">
+                  Aptivo Identity Strength
+                </span>
+              </div>
+              <h3 className="text-xl sm:text-2xl font-black">Profile {completion.score}% Complete</h3>
+              <p className="text-xs text-emerald-200/80 max-w-md">
+                A comprehensive profile increases your chance of acceptance into BUILD project teams and expert meetups.
               </p>
+            </div>
+
+            <div className="bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/10 sm:w-64 shrink-0 space-y-2">
+              <div className="flex items-center justify-between text-xs font-bold">
+                <span>Strength</span>
+                <span className="text-brand-400">{completion.score}%</span>
+              </div>
+              <div className="w-full h-2.5 rounded-full bg-white/10 overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-brand-400 to-emerald-400 rounded-full transition-all duration-500"
+                  style={{ width: `${completion.score}%` }}
+                />
+              </div>
+              {completion.suggestions.length > 0 && (
+                <p className="text-[10px] text-emerald-200/70 truncate">
+                  Next: {completion.suggestions[0]}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* LINKS TAB (MY NETWORK) */}
+      {activeTab === 'links' && (
+        <div className="space-y-6">
+          {/* Pending Incoming Requests */}
+          {linksList.pendingIncoming.length > 0 && (
+            <div className="bg-amber-50/70 border border-amber-200/80 rounded-3xl p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-extrabold text-amber-950 flex items-center gap-2">
+                  <UserPlus className="w-4 h-4 text-amber-700" />
+                  <span>Pending Link Requests ({linksList.pendingIncoming.length})</span>
+                </h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {linksList.pendingIncoming.map((link) => {
+                  const reqUser = link.requester;
+                  return (
+                    <div key={link._id} className="bg-white rounded-2xl p-4 border border-amber-200/60 shadow-xs flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="relative w-10 h-10 rounded-xl overflow-hidden bg-slate-100 shrink-0">
+                          {reqUser?.avatarUrl || reqUser?.profilePhoto ? (
+                            <Image src={reqUser.avatarUrl || reqUser.profilePhoto || ''} alt="" fill className="object-cover" unoptimized />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center font-bold text-slate-600">
+                              {reqUser?.name?.charAt(0) || 'U'}
+                            </div>
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <Link href={`/dashboard/profile?email=${reqUser?.email}`} className="text-xs font-bold text-slate-900 hover:text-brand-600 truncate block">
+                            {reqUser?.fullName || reqUser?.name}
+                          </Link>
+                          <p className="text-[11px] text-slate-500 truncate">
+                            {reqUser?.university || reqUser?.organization || reqUser?.role}
+                          </p>
+                          {link.note && (
+                            <p className="text-[10px] text-slate-600 italic mt-0.5 line-clamp-1">"{link.note}"</p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          onClick={() => handleRespondLink('accept', link._id)}
+                          className="px-3 py-1.5 rounded-xl bg-brand-600 text-white text-xs font-bold hover:bg-brand-700"
+                        >
+                          Accept
+                        </button>
+                        <button
+                          onClick={() => handleRespondLink('decline', link._id)}
+                          className="px-2.5 py-1.5 rounded-xl border border-slate-200 text-slate-500 text-xs font-bold hover:bg-slate-50"
+                        >
+                          Decline
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Connected Links Grid */}
+          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-soft space-y-6">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <Link2 className="w-5 h-5 text-brand-600" />
+                <h3 className="font-extrabold text-slate-900 text-lg">
+                  Connected Builders & Mentors ({linksList.accepted.length})
+                </h3>
+              </div>
+            </div>
+
+            {linksList.accepted.length === 0 ? (
+              <div className="py-12 text-center text-slate-400 space-y-2">
+                <Users className="w-8 h-8 mx-auto text-slate-300" />
+                <p className="text-sm font-bold text-slate-700">No active links yet</p>
+                <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                  Browse the SHOWCASE or MEETUP sessions and connect with fellow builders and industry minds.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {linksList.accepted.map((link) => {
+                  const isRequester = link.requester._id === profileUserId;
+                  const partner = isRequester ? link.recipient : link.requester;
+                  return (
+                    <div key={link._id} className="p-4 rounded-2xl border border-slate-200/80 bg-slate-50/50 hover:bg-white transition-all space-y-3">
+                      <div className="flex items-center gap-3">
+                        <div className="relative w-12 h-12 rounded-2xl overflow-hidden bg-slate-200 shrink-0">
+                          {partner?.avatarUrl || partner?.profilePhoto ? (
+                            <Image src={partner.avatarUrl || partner.profilePhoto || ''} alt="" fill className="object-cover" unoptimized />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center font-bold text-slate-600 text-base">
+                              {partner?.name?.charAt(0) || 'U'}
+                            </div>
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <Link href={`/dashboard/profile?email=${partner?.email}`} className="font-bold text-xs text-slate-900 hover:text-brand-600 truncate block">
+                            {partner?.fullName || partner?.name}
+                          </Link>
+                          <p className="text-[11px] text-brand-700 font-semibold truncate">
+                            {partner?.role === 'student' ? partner.degree || 'Student' : partner?.jobTitle || 'Professional'}
+                          </p>
+                          <p className="text-[10px] text-slate-400 truncate">
+                            {partner?.university || partner?.organization || 'Aptivo Builder'}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                        <Link
+                          href={`/dashboard/profile?email=${partner?.email}`}
+                          className="text-[11px] font-bold text-slate-700 hover:text-brand-600"
+                        >
+                          View Profile &rarr;
+                        </Link>
+                        <button
+                          onClick={() => handleRemoveLink(link._id)}
+                          className="text-[10px] text-slate-400 hover:text-rose-600"
+                          title="Disconnect"
+                        >
+                          Disconnect
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </div>
         </div>
-      </div>
+      )}
 
-      {/* EDIT MODE */}
-      {activeTab === 'edit' ? (
+      {/* EDIT MODE (Only when self) */}
+      {isSelf && activeTab === 'edit' ? (
         <form onSubmit={handleSaveProfile} className="space-y-8">
           {/* SECTION 1: Personal Information */}
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-soft space-y-6">
-            <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
-              <User className="w-5 h-5 text-brand-600" />
-              <h3 className="font-extrabold text-slate-900 text-lg">Personal Information</h3>
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <User className="w-5 h-5 text-brand-600" />
+                <h3 className="font-extrabold text-slate-900 text-lg">Personal Information & Photo</h3>
+              </div>
+            </div>
+
+            {/* Avatar Upload Area */}
+            <div className="flex flex-col sm:flex-row items-center gap-6 p-4 rounded-2xl bg-slate-50 border border-slate-200/70">
+              <div className="relative w-20 h-20 rounded-2xl overflow-hidden bg-slate-200 border-2 border-brand-500 shadow-sm shrink-0">
+                {profilePhoto ? (
+                  <Image src={profilePhoto} alt={fullName} fill className="object-cover" unoptimized />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center font-black text-2xl text-slate-600">
+                    {fullName.charAt(0) || 'U'}
+                  </div>
+                )}
+              </div>
+              <div className="space-y-1.5 flex-1 text-center sm:text-left">
+                <h4 className="text-xs font-bold text-slate-900">Profile Picture (GridFS Encrypted)</h4>
+                <p className="text-[11px] text-slate-500">
+                  Upload high-res JPG, PNG, or WEBP up to 5MB. Rendered across your profile, project showcases, and links.
+                </p>
+                <div className="flex items-center gap-3 pt-1 justify-center sm:justify-start">
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleAvatarFileChange}
+                    accept="image/png, image/jpeg, image/webp, image/gif"
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingAvatar}
+                    className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-slate-900 hover:bg-brand-600 text-white text-xs font-bold transition-all shadow-xs"
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>{uploadingAvatar ? 'Uploading...' : 'Upload Photo'}</span>
+                  </button>
+                  {avatarUploadMsg && (
+                    <span className="text-xs font-semibold text-emerald-700">{avatarUploadMsg}</span>
+                  )}
+                </div>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -456,12 +991,12 @@ export default function ProfilePage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Profile Photo URL</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Photo URL (Optional Override)</label>
                 <input
                   type="url"
                   value={profilePhoto}
                   onChange={(e) => setProfilePhoto(e.target.value)}
-                  placeholder="https://images.unsplash.com/..."
+                  placeholder="https://..."
                   className="w-full p-3 rounded-2xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20"
                 />
               </div>
@@ -500,7 +1035,7 @@ export default function ProfilePage() {
                     type="text"
                     value={campus}
                     onChange={(e) => setCampus(e.target.value)}
-                    placeholder="e.g. Karachi Campus"
+                    placeholder="e.g. Main Campus"
                     className="w-full p-3 rounded-2xl border border-slate-200 text-sm focus:outline-none"
                   />
                 </div>
@@ -617,7 +1152,6 @@ export default function ProfilePage() {
 
           {/* SECTION 4: Skills & Interests */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Skills */}
             <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-soft space-y-4">
               <div className="flex items-center gap-2">
                 <Layers className="w-5 h-5 text-brand-600" />
@@ -679,7 +1213,6 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            {/* Interests */}
             <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-soft space-y-4">
               <div className="flex items-center gap-2">
                 <Compass className="w-5 h-5 text-amber-600" />
@@ -768,7 +1301,7 @@ export default function ProfilePage() {
                   className="w-4 h-4 text-brand-600 rounded"
                 />
                 <span className="text-xs font-bold text-slate-800">
-                  Make my profile visible to other Aptivo Connect students and mentors
+                  Make my profile visible to other Aptivo Connect builders and mentors
                 </span>
               </label>
 
@@ -794,22 +1327,24 @@ export default function ProfilePage() {
             </div>
           </div>
         </form>
-      ) : (
-        /* PREVIEW MODE: Exact Public Profile View */
+      ) : activeTab === 'preview' ? (
+        /* PREVIEW MODE: Public Profile View */
         <div className="bg-white rounded-3xl p-6 sm:p-10 border border-slate-200/80 shadow-soft space-y-8 animate-in zoom-in-95 duration-200">
           <div className="flex items-center justify-between pb-4 border-b border-slate-100">
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
               <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                Public View Preview
+                {isSelf ? 'Public View Preview' : 'Builder Profile'}
               </span>
             </div>
-            <button
-              onClick={() => setActiveTab('edit')}
-              className="text-xs font-bold text-brand-600 hover:underline"
-            >
-              &larr; Return to Edit Mode
-            </button>
+            {isSelf && (
+              <button
+                onClick={() => setActiveTab('edit')}
+                className="text-xs font-bold text-brand-600 hover:underline"
+              >
+                &larr; Return to Edit Mode
+              </button>
+            )}
           </div>
 
           {/* Profile Card Header */}
@@ -831,7 +1366,7 @@ export default function ProfilePage() {
                 </span>
               </div>
               <p className="text-sm font-semibold text-brand-700">
-                {accountType === 'student' ? `${degree} • ${university}` : `${jobTitle} • ${organization}`}
+                {accountType === 'student' ? `${degree || 'Student'} • ${university || 'University'}` : `${jobTitle || 'Professional'} • ${organization || 'Organization'}`}
               </p>
               <p className="text-xs text-slate-400">{city || 'Pakistan'}</p>
             </div>
@@ -850,22 +1385,30 @@ export default function ProfilePage() {
             <div className="space-y-2">
               <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Skills & Tech Stack</p>
               <div className="flex flex-wrap gap-1.5">
-                {skills.map((s) => (
-                  <span key={s} className="px-3 py-1 rounded-full bg-slate-900 text-white text-xs font-bold">
-                    {s}
-                  </span>
-                ))}
+                {skills.length > 0 ? (
+                  skills.map((s) => (
+                    <span key={s} className="px-3 py-1 rounded-full bg-slate-900 text-white text-xs font-bold">
+                      {s}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-xs text-slate-400">No skills listed yet</span>
+                )}
               </div>
             </div>
 
             <div className="space-y-2">
               <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Domain Interests</p>
               <div className="flex flex-wrap gap-1.5">
-                {interests.map((int) => (
-                  <span key={int} className="px-3 py-1 rounded-full bg-amber-100 text-amber-900 text-xs font-bold">
-                    {int}
-                  </span>
-                ))}
+                {interests.length > 0 ? (
+                  interests.map((int) => (
+                    <span key={int} className="px-3 py-1 rounded-full bg-amber-100 text-amber-900 text-xs font-bold">
+                      {int}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-xs text-slate-400">No interests listed</span>
+                )}
               </div>
             </div>
           </div>
@@ -877,7 +1420,7 @@ export default function ProfilePage() {
                 Verified Projects ({verifiedProjects.length})
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {verifiedProjects.map((proj) => (
+                {verifiedProjects.map((proj: any) => (
                   <div key={proj._id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1">
                     <span className="text-[10px] font-bold uppercase text-brand-700">{proj.field}</span>
                     <h4 className="font-bold text-slate-900 text-sm">{proj.title}</h4>
@@ -907,7 +1450,7 @@ export default function ProfilePage() {
             )}
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

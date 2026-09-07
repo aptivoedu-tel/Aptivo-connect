@@ -5,7 +5,7 @@ import MeetRequest from '@/lib/models/MeetRequest';
 import Project from '@/lib/models/Project';
 import ProjectApplication from '@/lib/models/ProjectApplication';
 import Experience from '@/lib/models/Experience';
-import AccessEvent from '@/lib/models/AccessEvent';
+
 import Partner from '@/lib/models/Partner';
 import CampusDemand from '@/lib/models/CampusDemand';
 
@@ -38,7 +38,7 @@ export async function GET() {
       Project.countDocuments(),
       ProjectApplication.countDocuments(),
       Experience.countDocuments(),
-      AccessEvent.countDocuments(),
+      0,
       Partner.countDocuments({ partnershipStatus: 'Active' }),
       CampusDemand.find().sort({ createdAt: -1 }),
     ]);

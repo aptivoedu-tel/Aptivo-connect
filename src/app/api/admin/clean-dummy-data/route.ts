@@ -5,7 +5,6 @@ import MeetRequest from '@/lib/models/MeetRequest';
 import Project from '@/lib/models/Project';
 import ProjectApplication from '@/lib/models/ProjectApplication';
 import Experience from '@/lib/models/Experience';
-import AccessEvent from '@/lib/models/AccessEvent';
 import CampusDemand from '@/lib/models/CampusDemand';
 import CohortSession from '@/lib/models/CohortSession';
 import Partner from '@/lib/models/Partner';
@@ -25,13 +24,12 @@ export async function POST(req: Request) {
       email: { $in: ['hamza.raza@aptivo.pk', 'sara.ambassador@fast.edu.pk'] },
     });
 
-    // 2. Remove seeded fake projects, meets, experiences, events, cohorts, partners, campus demands
+    // 2. Remove seeded fake projects, meets, experiences, cohorts, partners, campus demands
     await Promise.all([
       MeetRequest.deleteMany({}),
       Project.deleteMany({}),
       ProjectApplication.deleteMany({}),
       Experience.deleteMany({}),
-      AccessEvent.deleteMany({}),
       CampusDemand.deleteMany({}),
       CohortSession.deleteMany({}),
       Partner.deleteMany({}),

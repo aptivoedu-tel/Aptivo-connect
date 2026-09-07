@@ -18,7 +18,7 @@ const NotificationSchema: Schema<INotification> = new Schema(
     message: { type: String, required: true },
     type: {
       type: String,
-      enum: ['meetup', 'meet', 'build', 'experience', 'access', 'system'],
+      enum: ['meetup', 'meet', 'build', 'experience', 'access', 'link', 'system'],
       default: 'system',
     },
     link: { type: String },

@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -14,6 +14,9 @@ import {
   Award,
   Radio,
   LogOut,
+  Link2,
+  MessageSquare,
+  Compass,
 } from 'lucide-react';
 import { clsx } from 'clsx';
 
@@ -32,10 +35,13 @@ export default function Sidebar() {
 
   const navItems = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-    { name: 'MEETUP', href: '/dashboard/meetup', icon: Users, badge: 'Events' },
     { name: 'BUILD', href: '/dashboard/build', icon: Hammer, badge: 'Teams' },
+    { name: 'MEETUP', href: '/dashboard/meetup', icon: Users, badge: 'Events' },
     { name: 'EXPERIENCE', href: '/dashboard/experience', icon: Building2, badge: 'Visits' },
     { name: 'Showcase', href: '/showcase', icon: Award, badge: 'Verified' },
+    { name: 'People', href: '/dashboard/people', icon: Compass, badge: 'Discover' },
+    { name: 'Links', href: '/dashboard/links', icon: Link2 },
+    { name: 'Messages', href: '/dashboard/messages', icon: MessageSquare },
     { name: 'Ambassador Program', href: '/dashboard/ambassador', icon: Radio, badge: 'Apply' },
     { name: 'Profile', href: '/dashboard/profile', icon: User },
   ];

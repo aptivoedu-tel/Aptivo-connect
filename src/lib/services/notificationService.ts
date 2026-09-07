@@ -11,7 +11,9 @@ export type NotificationEventType =
   | 'EXPERIENCE_SELECTED'
   | 'EVENT_REMINDER'
   | 'REGISTRATION_CONFIRMED'
-  | 'CAMPUS_DEMAND_ACTIONED';
+  | 'CAMPUS_DEMAND_ACTIONED'
+  | 'LINK_REQUEST'
+  | 'LINK_ACCEPTED';
 
 export interface NotificationPayload {
   userId: string | mongoose.Types.ObjectId;
@@ -20,7 +22,7 @@ export interface NotificationPayload {
   message: string;
   details?: Record<string, string | number>;
   link?: string;
-  type?: 'meet' | 'build' | 'experience' | 'access' | 'system';
+  type?: 'meetup' | 'meet' | 'build' | 'experience' | 'access' | 'link' | 'system';
 }
 
 export interface DispatchedLog {

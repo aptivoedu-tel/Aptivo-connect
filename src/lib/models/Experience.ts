@@ -1,11 +1,20 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
+export interface IExperienceQuestion {
+  id: string;
+  questionText: string;
+  questionType: 'short-text' | 'long-text' | 'single-choice' | 'multiple-choice';
+  required: boolean;
+  options?: string[];
+}
+
 export interface IEnrolledStudent {
   studentId: mongoose.Types.ObjectId;
   studentName: string;
   studentEmail: string;
   university?: string;
   whyAttend?: string;
+  questionResponses?: Array<{ questionText: string; answer: string }>;
   status: 'Applied' | 'Selected' | 'Confirmed' | 'Completed';
   enrolledAt: Date;
 }
@@ -24,7 +33,9 @@ export interface IExperience extends Document {
   eligibility: string;
   deadline: string;
   image: string;
+  posterUrl?: string;
   status: 'Upcoming' | 'Ongoing' | 'Completed';
+  questionnaire: IExperienceQuestion[];
   enrolledStudents: IEnrolledStudent[];
   createdAt: Date;
   updatedAt: Date;
@@ -45,12 +56,26 @@ const ExperienceSchema: Schema<IExperience> = new Schema(
     eligibility: { type: String, default: 'Open to all enrolled university students' },
     deadline: { type: String },
     image: { type: String },
+    posterUrl: { type: String },
     status: {
       type: String,
       enum: ['Upcoming', 'Ongoing', 'Completed'],
       default: 'Upcoming',
       index: true,
     },
+    questionnaire: [
+      {
+        id: { type: String },
+        questionText: { type: String, required: true },
+        questionType: {
+          type: String,
+          enum: ['short-text', 'long-text', 'single-choice', 'multiple-choice'],
+          default: 'short-text',
+        },
+        required: { type: Boolean, default: true },
+        options: { type: [String], default: [] },
+      },
+    ],
     enrolledStudents: [
       {
         studentId: { type: Schema.Types.ObjectId, ref: 'User' },
@@ -58,6 +83,12 @@ const ExperienceSchema: Schema<IExperience> = new Schema(
         studentEmail: { type: String },
         university: { type: String },
         whyAttend: { type: String },
+        questionResponses: [
+          {
+            questionText: { type: String },
+            answer: { type: String },
+          },
+        ],
         status: {
           type: String,
           enum: ['Applied', 'Selected', 'Confirmed', 'Completed'],

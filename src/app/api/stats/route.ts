@@ -4,7 +4,7 @@ import User from '@/lib/models/User';
 import MeetRequest from '@/lib/models/MeetRequest';
 import Project from '@/lib/models/Project';
 import Experience from '@/lib/models/Experience';
-import AccessEvent from '@/lib/models/AccessEvent';
+
 import ProjectApplication from '@/lib/models/ProjectApplication';
 import AmbassadorApplication from '@/lib/models/AmbassadorApplication';
 
@@ -49,7 +49,7 @@ export async function GET() {
       Project.countDocuments({ status: { $in: ['Approved', 'Active', 'Showcase'] } }),
       Project.countDocuments({ status: 'Pending' }),
       Experience.countDocuments(),
-      AccessEvent.countDocuments(),
+      0,
       ProjectApplication.countDocuments({ status: 'Applied' }),
       AmbassadorApplication.countDocuments({ status: { $in: ['Submitted', 'Under Review'] } }),
     ]);

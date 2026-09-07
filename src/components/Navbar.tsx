@@ -39,7 +39,7 @@ export default function Navbar() {
               <span className="font-semibold text-xl tracking-tight text-brand-600">Connect</span>
             </div>
             <p className="text-[10px] uppercase font-bold tracking-widest text-slate-400">
-              Meet • Build • Experience • Access
+              Meetup • Build • Experience • Showcase
             </p>
           </div>
         </Link>

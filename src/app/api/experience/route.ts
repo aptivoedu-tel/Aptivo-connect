@@ -43,8 +43,11 @@ export async function POST(req: Request) {
       eligibility: body.eligibility || 'Open to all university students',
       deadline: body.deadline,
       image:
+        body.posterUrl ||
         body.image ||
         'https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&auto=format&fit=crop&q=80',
+      posterUrl: body.posterUrl || body.image,
+      questionnaire: Array.isArray(body.questionnaire) ? body.questionnaire : [],
       status: body.status || 'Upcoming',
       enrolledStudents: [],
     });

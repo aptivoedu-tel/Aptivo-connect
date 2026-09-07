@@ -6,6 +6,16 @@ export interface IUserPrivacy {
   showPhone: boolean;
 }
 
+export interface IUserReputation {
+  fromUserId: mongoose.Types.ObjectId;
+  fromUserName: string;
+  projectId: mongoose.Types.ObjectId;
+  projectTitle: string;
+  category: string;
+  comment?: string;
+  createdAt: Date;
+}
+
 export interface IUser extends Document {
   fullName: string;
   name: string; // alias for backwards compatibility
@@ -58,6 +68,9 @@ export interface IUser extends Document {
   projectsCount: number;
   experiencesCount: number;
   accessCount: number;
+
+  // Reputation & Peer endorsements
+  reputation: IUserReputation[];
 
   createdAt: Date;
   updatedAt: Date;
@@ -135,6 +148,19 @@ const UserSchema: Schema<IUser> = new Schema(
     projectsCount: { type: Number, default: 0 },
     experiencesCount: { type: Number, default: 0 },
     accessCount: { type: Number, default: 0 },
+
+    // Reputation
+    reputation: [
+      {
+        fromUserId: { type: Schema.Types.ObjectId, ref: 'User' },
+        fromUserName: { type: String },
+        projectId: { type: Schema.Types.ObjectId, ref: 'Project' },
+        projectTitle: { type: String },
+        category: { type: String },
+        comment: { type: String },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
   },
   { timestamps: true }
 );

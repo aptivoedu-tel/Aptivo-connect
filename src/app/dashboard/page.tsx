@@ -13,6 +13,7 @@ import {
   Clock,
   Sparkles,
   ExternalLink,
+  Award,
 } from 'lucide-react';
 import StatusPill from '@/components/StatusPill';
 
@@ -126,6 +127,13 @@ export default function DashboardOverview() {
             >
               <Building2 className="w-4 h-4 text-blue-300" />
               <span>Explore Visits</span>
+            </Link>
+            <Link
+              href="/showcase"
+              className="flex items-center gap-2 p-3 rounded-2xl bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/10 transition-all text-xs font-medium"
+            >
+              <Award className="w-4 h-4 text-brand-300" />
+              <span>Showcase</span>
             </Link>
           </div>
         </div>

@@ -24,14 +24,38 @@ export default function DashboardLayout({
   const [user, setUser] = useState<IUserProfile | null>(null);
 
   useEffect(() => {
-    // Seed DB once if needed and fetch current user
-    fetch('/api/seed').catch(console.error);
-    fetch('/api/auth/me')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.user) setUser(data.user);
-      })
-      .catch(console.error);
+    let email = '';
+    try {
+      const stored = JSON.parse(localStorage.getItem('aptivo_user') || '{}');
+      if (stored && (stored.name || stored.email)) {
+        setUser({
+          name: stored.fullName || stored.name || 'Builder',
+          email: stored.email || '',
+          avatarUrl: stored.profilePhoto || stored.avatarUrl || '',
+          university: stored.university || '',
+          field: stored.field || stored.fieldOfStudy || stored.degree || '',
+        });
+        email = stored.email || '';
+      }
+    } catch {}
+
+    if (email) {
+      fetch(`/api/auth/me?email=${encodeURIComponent(email)}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.user) {
+            const u = data.user;
+            setUser({
+              name: u.fullName || u.name || 'Builder',
+              email: u.email,
+              avatarUrl: u.profilePhoto || u.avatarUrl || '',
+              university: u.university || u.organization || '',
+              field: u.field || u.fieldOfStudy || u.degree || u.jobTitle || '',
+            });
+          }
+        })
+        .catch(console.error);
+    }
   }, []);
 
   return (

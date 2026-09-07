@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Users, Hammer, Building2, User } from 'lucide-react';
+import { LayoutDashboard, Users, Hammer, Building2, User, Compass, MessageSquare } from 'lucide-react';
 import { clsx } from 'clsx';
 
 export default function MobileNav() {
@@ -11,9 +11,9 @@ export default function MobileNav() {
 
   const navItems = [
     { name: 'Home', href: '/dashboard', icon: LayoutDashboard },
-    { name: 'Meetup', href: '/dashboard/meetup', icon: Users },
     { name: 'Build', href: '/dashboard/build', icon: Hammer },
-    { name: 'Experience', href: '/dashboard/experience', icon: Building2 },
+    { name: 'People', href: '/dashboard/people', icon: Compass },
+    { name: 'Chat', href: '/dashboard/messages', icon: MessageSquare },
     { name: 'Profile', href: '/dashboard/profile', icon: User },
   ];
 
