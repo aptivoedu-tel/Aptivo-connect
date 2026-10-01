@@ -232,130 +232,114 @@ export default function BuildPage() {
     return matchesField && matchesSearch;
   });
 
-  const categories = ['All', 'AI & Healthcare', 'Fintech & Software', 'Robotics & Hardware', 'Design'];
+  const filters = ['All Projects', 'Recruiting', 'My Projects'];
+  const categories = ['All Projects', 'Recruiting', 'My Projects'];
+
+  /* Map filter to logic */
+  const getFilteredByTab = () => {
+    let list = projects;
+    if (selectedField === 'Recruiting') {
+      list = list.filter((p) => p.status === 'recruiting' || (p.teamSize && (p.members?.length || 0) < p.teamSize));
+    } else if (selectedField === 'My Projects') {
+      let email = '';
+      try { email = JSON.parse(localStorage.getItem('aptivo_user') || '{}').email || ''; } catch {}
+      list = list.filter((p) => p.members?.some((m: any) => m.userId === email || m.email === email) || false);
+    }
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter((p) => p.title.toLowerCase().includes(q) || p.problem.toLowerCase().includes(q) || p.requiredSkills.some((s) => s.toLowerCase().includes(q)));
+    }
+    return list;
+  };
+  const displayProjects = getFilteredByTab();
+
+  const isRecruiting = (proj: IProject) => proj.status === 'recruiting' || (proj.teamSize && (proj.members?.length || 0) < proj.teamSize);
 
   return (
-    <div className="space-y-7">
-      {/* Header */}
-      <div className="flex flex-col justify-between gap-4 border-b border-[#E4E7E2] pb-6 sm:flex-row sm:items-center">
-        <div>
-          <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-[#E4EEE8] px-3 py-1 font-sans text-xs font-semibold text-[#174D3A]">
-            <Hammer className="w-3.5 h-3.5" />
-            <span>Pillar 2: BUILD</span>
-          </div>
-          <h2 className="font-serif font-normal text-[30px] sm:text-[34px] leading-tight text-[#18201C]">Build with people who care.</h2>
-        </div>
-
-        <button
-          onClick={() => setIsCreateModalOpen(true)}
-          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-[#174D3A] px-6 py-3 font-sans text-sm font-semibold text-white transition hover:bg-[#287A5B]"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Propose a Project</span>
+    <div className="space-y-5">
+      {/* Header — Screen 4: "Build" serif + search icon */}
+      <div className="flex items-center justify-between">
+        <h1 className="font-serif font-normal text-[28px] sm:text-[32px] leading-tight text-[#18201C]">Build</h1>
+        <button onClick={() => setSearchQuery(searchQuery ? '' : ' ')} aria-label="Search projects" className="grid h-9 w-9 place-items-center rounded-full text-[#18201C] hover:bg-[#E4EEE8] transition-colors">
+          <Search className="h-5 w-5" />
         </button>
       </div>
 
-      {/* Filter & Search Bar */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-        {/* Category Pills */}
-        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setSelectedField(cat)}
-              className={`px-3.5 py-1.5 rounded-full font-sans text-xs font-semibold transition-all ${
-                selectedField === cat
-                  ? 'bg-[#174D3A] text-white'
-                  : 'bg-white text-[#69736D] border border-[#E4E7E2] hover:bg-[#E4EEE8]'
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
+      {/* Search bar (expandable) */}
+      {searchQuery !== '' && (
+        <div className="relative">
+          <Search className="w-4 h-4 text-[#69736D] absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <input type="text" value={searchQuery.trim()} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search projects..." autoFocus className="aptivo-input w-full min-h-11 rounded-xl pl-9 pr-4 font-sans text-[14px]" />
         </div>
+      )}
 
-        {/* Search */}
-        <div className="relative w-full sm:w-72">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search projects"
-            className="aptivo-input w-full min-h-11 rounded-xl pl-9 pr-4 font-sans text-sm"
-          />
-        </div>
+      {/* Filter pills — Screen 4 */}
+      <div className="flex flex-wrap gap-2">
+        {filters.map((f) => (
+          <button key={f} onClick={() => setSelectedField(f)}
+            className={`px-4 py-2 rounded-full font-sans text-[13px] font-semibold transition-all ${
+              selectedField === f ? 'bg-[#174D3A] text-white' : 'bg-white text-[#69736D] border border-[#E4E7E2] hover:bg-[#E4EEE8]'
+            }`}
+          >{f}</button>
+        ))}
+        <button onClick={() => setIsCreateModalOpen(true)} className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-[#E4EEE8] px-4 py-2 text-[13px] font-semibold text-[#174D3A] transition hover:bg-[#d4e5da] font-sans">
+          <Plus className="w-4 h-4" /> Propose
+        </button>
       </div>
 
-      {/* Projects Grid */}
+      {/* Projects — Screen 4 cards */}
       {loading ? (
-        <div className="py-12 text-center text-slate-400 font-sans text-sm">Loading projects...</div>
-      ) : filteredProjects.length === 0 ? (
-        <div className="space-y-3 rounded-3xl border border-dashed border-[#E4E7E2] bg-white p-12 text-center">
-          <Hammer className="mx-auto h-8 w-8 text-[#287A5B]" />
+        <div className="space-y-4">{[1, 2].map((i) => <div key={i} className="h-72 animate-pulse rounded-[18px] bg-[#E4EEE8]" />)}</div>
+      ) : displayProjects.length === 0 ? (
+        <div className="space-y-3 rounded-[18px] border border-dashed border-[#E4E7E2] bg-white p-10 text-center">
+          <Hammer className="mx-auto h-7 w-7 text-[#287A5B]" />
           <h3 className="font-serif font-normal text-[18px] text-[#18201C]">No projects found</h3>
-          <p className="mx-auto max-w-md font-sans text-xs text-[#69736D]">
-            Try adjusting your search query or propose a new project brief using the button above.
-          </p>
+          <p className="mx-auto max-w-sm font-sans text-[13px] text-[#69736D]">Try adjusting your filters or propose a new project.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredProjects.map((proj) => (
-            <div
-              key={proj._id}
-              className="group flex flex-col justify-between overflow-hidden rounded-[22px] border border-[#E4E7E2] bg-white transition hover:-translate-y-0.5 hover:border-[#287A5B]/45 hover:shadow-[0_10px_26px_rgba(24,32,28,.07)]"
-            >
-              <div className="space-y-4">
-                <MediaImage src={proj.coverImage} alt={proj.title} kind="build" className="h-40" />
-                <div className="px-5 space-y-4">
-                    {proj.isAptivoVerified && (
-                      <span className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-emerald-950/80 backdrop-blur-md text-emerald-300 border border-emerald-500/40 font-sans text-[10px] font-semibold flex items-center gap-1 shadow-sm">
-                        <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                        Aptivo Verified
-                      </span>
-                    )}
-                <div className="flex items-center justify-between">
-                  <span className="font-sans text-[11px] font-semibold uppercase tracking-wider text-[#287A5B]">
-                    {proj.field}
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+          {displayProjects.map((proj) => (
+            <div key={proj._id} className="group flex flex-col overflow-hidden rounded-[18px] border border-[#E4E7E2] bg-white transition hover:-translate-y-0.5 hover:border-[#287A5B]/30 hover:shadow-[0_8px_24px_rgba(24,32,28,.06)]">
+              {/* Image + status pill */}
+              <div className="relative">
+                <MediaImage src={proj.coverImage} alt={proj.title} kind="build" className="h-44" />
+                {isRecruiting(proj) && (
+                  <span className="absolute right-3 top-3 rounded-full bg-[#174D3A] px-3 py-1 text-[11px] font-semibold text-white font-sans shadow-sm">
+                    Recruiting
                   </span>
-                  <StatusPill status={proj.status} size="sm" />
-                </div>
-
-                <div>
-                  <h4 className="font-sans font-semibold text-[15px] md:text-[17px] leading-[1.25] text-[#18201C]">
-                    {proj.title}
-                  </h4>
-                  <p className="mt-2 line-clamp-1 font-sans text-xs text-[#69736D]">{proj.building || proj.problem}</p>
-                </div></div>
-
-                {/* Skills Tags */}
-                <div className="flex flex-wrap gap-1.5 pt-1">
-                  {proj.requiredSkills.map((sk) => (
-                    <span
-                      key={sk}
-                      className="rounded-full bg-[#E4EEE8] px-2.5 py-1 text-[10px] font-medium text-[#174D3A]"
-                    >
-                      {sk}
-                    </span>
-                  ))}
-                </div>
+                )}
               </div>
 
-              <div className="mx-5 mt-4 space-y-3 border-t border-[#E4E7E2] pt-4">
-                <div className="flex items-center justify-between text-[11px] text-[#69736D]">
-                  <span className="flex items-center gap-1">
-                    <Users className="w-3.5 h-3.5 text-slate-400" />
-                    {proj.members?.length || 1}/{proj.teamSize} Team Seats
-                  </span>
-                  <span>{proj.mode} • {proj.duration}</span>
-                </div>
+              {/* Content */}
+              <div className="flex flex-1 flex-col p-4 pt-3.5 space-y-3">
+                <h4 className="font-sans font-semibold text-[15px] leading-[1.3] text-[#18201C] line-clamp-2">{proj.title}</h4>
+                <p className="line-clamp-2 text-[13px] leading-relaxed text-[#69736D] font-sans">{proj.building || proj.problem}</p>
 
-                <button
-                  onClick={() => setApplyModalProject(proj)}
-                  className="w-full rounded-xl bg-[#E86F51] py-2.5 text-xs font-bold text-white transition hover:bg-[#cf5e43]"
-                >
-                  Apply to Join Team
-                </button>
+                {/* Skill chips */}
+                {proj.requiredSkills.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {proj.requiredSkills.slice(0, 3).map((sk) => (
+                      <span key={sk} className="rounded-full bg-[#E4EEE8] px-2.5 py-0.5 text-[11px] font-medium text-[#174D3A] font-sans">{sk}</span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Bottom: members + action */}
+                <div className="mt-auto flex items-center justify-between pt-2 border-t border-[#E4E7E2]">
+                  <span className="flex items-center gap-1.5 text-[12px] text-[#69736D] font-sans">
+                    <Users className="h-3.5 w-3.5" />
+                    {proj.members?.length || 0} members
+                  </span>
+                  {isRecruiting(proj) ? (
+                    <button onClick={() => setApplyModalProject(proj)} className="inline-flex items-center gap-1 rounded-full bg-[#E86F51] px-4 py-1.5 text-[12px] font-semibold text-white transition hover:bg-[#cf5e43] font-sans">
+                      Apply <span className="text-[14px]">→</span>
+                    </button>
+                  ) : (
+                    <button onClick={() => setApplyModalProject(proj)} className="inline-flex items-center gap-1 rounded-full border border-[#E4E7E2] px-4 py-1.5 text-[12px] font-semibold text-[#174D3A] transition hover:bg-[#E4EEE8] font-sans">
+                      View Details <span className="text-[14px]">→</span>
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           ))}

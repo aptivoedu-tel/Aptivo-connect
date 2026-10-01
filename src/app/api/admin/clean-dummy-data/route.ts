@@ -15,18 +15,84 @@ import { authError, requireAdmin } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
-// Purges dummy seed data and ensures clean empty states with real admin intact
+// Known demo/seed email addresses — extend this list as needed
+const DEMO_USER_EMAILS = [
+  'hamza.raza@aptivo.pk',
+  'sara.ambassador@fast.edu.pk',
+];
+
+/**
+ * POST /api/admin/clean-dummy-data
+ *
+ * Query params:
+ *   ?dry=true   — inspect only, no writes (default: false)
+ *
+ * Removes seeded demo users and all content records,
+ * then re-runs the admin bootstrap.
+ */
 export async function POST(req: Request) {
   try {
     await requireAdmin();
     await connectToDatabase();
 
-    // 1. Remove seeded fake users (keep real users & admin)
-    await User.deleteMany({
-      email: { $in: ['hamza.raza@aptivo.pk', 'sara.ambassador@fast.edu.pk'] },
-    });
+    const { searchParams } = new URL(req.url);
+    const isDryRun = searchParams.get('dry') === 'true';
 
-    // 2. Remove seeded fake projects, meets, experiences, cohorts, partners, campus demands
+    // ── 1. Identify demo users ──────────────────────────────────────────────
+    const demoUsers = await User.find({
+      email: { $in: DEMO_USER_EMAILS },
+    }).select('_id fullName email role');
+
+    // ── 2. Count content records that would be removed ─────────────────────
+    const [
+      meetCount,
+      projectCount,
+      appCount,
+      expCount,
+      campusCount,
+      cohortCount,
+      partnerCount,
+      ambassadorCount,
+      notifCount,
+    ] = await Promise.all([
+      MeetRequest.countDocuments({}),
+      Project.countDocuments({}),
+      ProjectApplication.countDocuments({}),
+      Experience.countDocuments({}),
+      CampusDemand.countDocuments({}),
+      CohortSession.countDocuments({}),
+      Partner.countDocuments({}),
+      AmbassadorApplication.countDocuments({}),
+      Notification.countDocuments({}),
+    ]);
+
+    const report = {
+      demoUsersFound: demoUsers.map((u) => ({ id: u._id, email: u.email, name: u.fullName })),
+      contentToRemove: {
+        meetRequests: meetCount,
+        projects: projectCount,
+        projectApplications: appCount,
+        experiences: expCount,
+        campusDemands: campusCount,
+        cohortSessions: cohortCount,
+        partners: partnerCount,
+        ambassadorApplications: ambassadorCount,
+        notifications: notifCount,
+      },
+    };
+
+    if (isDryRun) {
+      return NextResponse.json({
+        dryRun: true,
+        message: 'DRY RUN — no changes made. Review the report below.',
+        ...report,
+      });
+    }
+
+    // ── 3. Delete demo users ────────────────────────────────────────────────
+    await User.deleteMany({ email: { $in: DEMO_USER_EMAILS } });
+
+    // ── 4. Remove all content records ──────────────────────────────────────
     await Promise.all([
       MeetRequest.deleteMany({}),
       Project.deleteMany({}),
@@ -39,12 +105,21 @@ export async function POST(req: Request) {
       Notification.deleteMany({}),
     ]);
 
-    // 3. Ensure Admin account is present
-    await seedDatabase();
+    // ── 5. Re-bootstrap admin account ──────────────────────────────────────
+    const seed = await seedDatabase();
 
     return NextResponse.json({
       success: true,
-      message: 'All dummy and seed data purged. Database is now in clean state with Admin preserved.',
+      message: 'All demo data purged. Database is now clean with Admin preserved.',
+      removedDemoUsers: report.demoUsersFound,
+      removedContent: report.contentToRemove,
+      adminBootstrap: seed,
     });
-  } catch (error: unknown) { const auth = authError(error); return NextResponse.json(auth || { error: (error as Error).message }, { status: auth?.status || 500 }); }
+  } catch (error: unknown) {
+    const auth = authError(error);
+    return NextResponse.json(
+      auth || { error: (error as Error).message },
+      { status: auth?.status || 500 }
+    );
+  }
 }

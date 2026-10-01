@@ -68,26 +68,25 @@ export default function ShowcasePage() {
   });
 
   return (
-    <div className="w-full bg-[#f7f9f8] font-sans">
-
+    <div className="w-full bg-[#F7F6F1] font-sans animate-in fade-in duration-200">
       {/* Header Banner */}
-      <section className="border-b border-slate-200/70 bg-white py-8 sm:py-10">
+      <section className="border-b border-[#E4E7E2] bg-white py-8 sm:py-10">
         <div className="mx-auto max-w-7xl space-y-3 px-4 sm:px-6 lg:px-8">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-100/80 text-emerald-900 text-xs font-bold border border-emerald-200">
-            <Award className="w-3.5 h-3.5 text-brand-600" />
+          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#E4EEE8] text-[#174D3A] text-[12px] font-semibold">
+            <Award className="w-3.5 h-3.5" />
             <span>Built Through Aptivo Connect</span>
           </div>
-          <h1 className="font-serif font-normal text-[30px] sm:text-[34px] leading-tight text-slate-950">
+          <h1 className="font-serif font-normal text-[30px] sm:text-[34px] leading-tight text-[#18201C]">
             Built by Connect teams
           </h1>
-          <p className="max-w-2xl text-sm leading-6 text-slate-600">
+          <p className="max-w-2xl text-[14px] leading-relaxed text-[#69736D]">
             A look at the work students have brought to life together.
           </p>
         </div>
       </section>
 
       {/* Main Content */}
-      <div className="mx-auto w-full max-w-7xl flex-1 space-y-8 px-1 py-3 sm:px-4">
+      <div className="mx-auto w-full max-w-7xl space-y-6 px-4 sm:px-6 lg:px-8 py-6">
         {/* Filter Bar */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex flex-wrap gap-2">
@@ -95,10 +94,10 @@ export default function ShowcasePage() {
               <button
                 key={cat}
                 onClick={() => setSelectedField(cat)}
-                className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                className={`px-4 py-1.5 rounded-full text-[13px] font-semibold transition-all ${
                   selectedField === cat
-                    ? 'bg-slate-900 text-white shadow-sm'
-                    : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                    ? 'bg-[#174D3A] text-white shadow-sm'
+                    : 'bg-white border border-[#E4E7E2] text-[#69736D] hover:bg-[#F7F6F1]'
                 }`}
               >
                 {cat}
@@ -107,96 +106,93 @@ export default function ShowcasePage() {
           </div>
 
           <div className="relative w-full sm:w-72">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-[#69736D] absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search showcase..."
-              className="w-full pl-9 pr-4 py-2 rounded-2xl border border-slate-200 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+              className="w-full pl-9 pr-4 py-2 rounded-full border border-[#E4E7E2] text-[13px] bg-white focus:outline-none focus:ring-2 focus:ring-[#174D3A]/20"
             />
           </div>
         </div>
 
         {/* Showcase Grid */}
         {loading ? (
-          <div className="py-12 text-center text-slate-400 text-sm">Loading showcase projects...</div>
+          <div className="py-12 text-center text-[#69736D] text-[14px]">Loading showcase projects...</div>
         ) : filtered.length === 0 ? (
-          <div className="p-12 bg-white rounded-3xl border border-dashed border-slate-300 text-center space-y-3">
-            <Award className="w-8 h-8 text-slate-400 mx-auto" />
-            <h3 className="font-bold text-slate-800 text-base">No Showcase Projects Found</h3>
-            <p className="text-xs text-slate-500">
+          <div className="p-10 bg-white rounded-[16px] border border-dashed border-[#E4E7E2] text-center space-y-2">
+            <Award className="w-8 h-8 text-[#69736D] mx-auto" />
+            <h3 className="font-serif font-normal text-[18px] text-[#18201C]">No Showcase Projects Found</h3>
+            <p className="text-[13px] text-[#69736D]">
               Try changing filters or explore active projects inside the BUILD directory.
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {filtered.map((proj) => (
               <div
                 key={proj._id}
-                className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-soft hover:shadow-xl transition-all duration-300 flex flex-col justify-between group"
+                className="bg-white rounded-[16px] p-5 border border-[#E4E7E2] shadow-sm hover:shadow-md transition-all flex flex-col justify-between group"
               >
                 <div className="space-y-4">
-                  {/* Cover Image */}
-                  <div className="relative w-full h-44 rounded-2xl overflow-hidden mb-3">
+                  <div className="relative w-full h-44 rounded-[12px] overflow-hidden mb-3">
                     <MediaImage src={proj.coverImage} alt={proj.title} kind="build" className="h-full w-full group-hover:scale-105 transition-transform duration-300" />
-                    <span className="absolute top-3 right-3 px-3 py-1 rounded-full bg-emerald-950/80 backdrop-blur-md text-emerald-300 border border-emerald-500/40 text-[10px] font-bold flex items-center gap-1 shadow-sm">
-                      <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                    <span className="absolute top-3 right-3 px-3 py-1 rounded-full bg-black/70 backdrop-blur-sm text-white text-[11px] font-medium flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-[#287A5B]" />
                       Verified Outcome
                     </span>
                   </div>
 
                   <div>
-                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    <span className="text-[11px] font-semibold text-[#174D3A] uppercase tracking-wide">
                       {proj.field}
                     </span>
-                    <h3 className="font-extrabold text-slate-900 text-lg mt-1 leading-snug">
+                    <h3 className="font-semibold text-[#18201C] text-[16px] mt-1 leading-snug">
                       {proj.title}
                     </h3>
-                    <p className="text-xs text-slate-600 mt-2 line-clamp-2 leading-relaxed">
+                    <p className="text-[13px] text-[#69736D] mt-1.5 line-clamp-2">
                       {proj.building || proj.description}
                     </p>
                   </div>
 
-                  {/* Outcomes highlight */}
                   {proj.showcase?.outcomes && (
-                    <div className="p-3 bg-emerald-50/70 rounded-xl border border-emerald-100 text-xs text-emerald-900">
-                      <p className="font-bold text-[10px] uppercase text-emerald-800">Impact Outcome:</p>
-                      <p className="text-emerald-950 mt-0.5">{proj.showcase.outcomes}</p>
+                    <div className="p-3 bg-[#E4EEE8] rounded-[12px] text-[12px] text-[#174D3A]">
+                      <p className="font-semibold text-[11px] uppercase">Impact Outcome:</p>
+                      <p className="mt-0.5">{proj.showcase.outcomes}</p>
                     </div>
                   )}
 
-                  {/* Team Members snapshot */}
-                  <div className="space-y-1.5 pt-1">
-                    <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                  <div className="space-y-1 pt-1">
+                    <p className="text-[11px] uppercase font-semibold text-[#69736D]">
                       Verified Team:
                     </p>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
                       {proj.members && proj.members.length > 0 ? (
                         proj.members.map((m, idx) => (
                           <div
                             key={idx}
                             title={`${m.name} (${m.role})`}
-                            className="w-7 h-7 rounded-full bg-brand-600 text-white font-bold text-[10px] flex items-center justify-center border-2 border-white ring-1 ring-slate-200"
+                            className="w-7 h-7 rounded-full bg-[#174D3A] text-white font-semibold text-[11px] flex items-center justify-center border-2 border-white shadow-xs"
                           >
                             {m.name.charAt(0)}
                           </div>
                         ))
                       ) : (
-                        <span className="text-xs text-slate-500">Student Team</span>
+                        <span className="text-[12px] text-[#69736D]">Student Team</span>
                       )}
                     </div>
                   </div>
                 </div>
 
-                <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-3 text-xs text-slate-600">
+                <div className="pt-4 mt-4 border-t border-[#E4E7E2] flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-3 text-[12px] text-[#69736D]">
                     {proj.showcase?.githubUrl && (
                       <a
                         href={proj.showcase.githubUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="hover:text-slate-900 flex items-center gap-1 font-semibold"
+                        className="hover:text-[#18201C] flex items-center gap-1 font-medium"
                       >
                         <Github className="w-3.5 h-3.5" /> Code
                       </a>
@@ -206,16 +202,16 @@ export default function ShowcasePage() {
                         href={proj.showcase.demoUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-brand-700 hover:text-brand-800 flex items-center gap-1 font-semibold"
+                        className="text-[#174D3A] hover:underline flex items-center gap-1 font-medium"
                       >
-                        <ExternalLink className="w-3.5 h-3.5" /> Live Demo
+                        <ExternalLink className="w-3.5 h-3.5" /> Demo
                       </a>
                     )}
                   </div>
 
                   <Link
                     href={`/showcase/${proj._id}`}
-                    className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-brand-600 text-white text-xs font-bold transition-colors"
+                    className="px-4 py-2 rounded-full bg-[#174D3A] hover:bg-[#287A5B] text-white text-[12px] font-semibold transition-colors"
                   >
                     View Project &rarr;
                   </Link>
@@ -225,7 +221,6 @@ export default function ShowcasePage() {
           </div>
         )}
       </div>
-
     </div>
   );
 }

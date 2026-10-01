@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Sparkles, Menu, X, ArrowRight, LogIn, UserPlus, User, ShieldCheck, LogOut } from 'lucide-react';
+import { Menu, X, ArrowRight, LogIn, User, ShieldCheck, LogOut } from 'lucide-react';
 
 export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -11,190 +11,118 @@ export default function Navbar() {
   useEffect(() => {
     try {
       const stored = localStorage.getItem('aptivo_user');
-      if (stored) {
-        setCurrentUser(JSON.parse(stored));
-      }
+      if (stored) setCurrentUser(JSON.parse(stored));
     } catch {}
   }, []);
 
   const handleSignOut = () => {
     fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
-    try {
-      localStorage.removeItem('aptivo_user');
-    } catch {}
+    try { localStorage.removeItem('aptivo_user'); } catch {}
     setCurrentUser(null);
     window.location.replace('/auth/login');
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full backdrop-blur-md bg-white/80 border-b border-slate-100/80 transition-all">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-[68px] flex items-center justify-between">
-        {/* Brand Logo */}
-        <Link href="/" className="flex items-center gap-3 group">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-brand-600 to-darkpine-900 flex items-center justify-center text-white shadow-md shadow-brand-500/20 group-hover:scale-105 transition-transform">
-            <Sparkles className="w-5 h-5 text-brand-200" />
-          </div>
-          <div>
-            <div className="flex items-center gap-1.5">
-              <span className="font-serif font-normal text-xl tracking-tight text-slate-900">Aptivo</span>
-              <span className="font-sans font-semibold text-xl tracking-tight text-brand-600">Connect</span>
-            </div>
-            <p className="hidden text-[11px] font-medium text-slate-500 sm:block font-sans">
-              Meet · Build · Experience
-            </p>
-          </div>
+    <header className="sticky top-0 z-40 w-full bg-[#F7F6F1]">
+      <div className="mx-auto flex h-[56px] sm:h-[64px] lg:h-[72px] max-w-7xl items-center justify-between px-5 sm:px-8 lg:px-10">
+        {/* Wordmark */}
+        <Link href="/" className="flex flex-col leading-none">
+          <span className="font-serif font-normal text-[22px] lg:text-[26px] tracking-[-0.01em] text-[#18201C]">Aptivo</span>
+          <span className="font-sans text-[13px] lg:text-[14px] font-semibold text-[#174D3A] -mt-0.5">Connect</span>
         </Link>
 
-        {/* Desktop Nav Links */}
-        <nav className="hidden md:flex items-center gap-7 text-sm font-medium text-slate-600">
-          <Link href="/#pillars" className="hover:text-brand-600 transition-colors">
-            Explore
-          </Link>
-          <Link href="/#how-it-works" className="hover:text-brand-600 transition-colors">
-            How It Works
-          </Link>
-          <Link href="/#faq" className="hover:text-brand-600 transition-colors">
-            FAQ
-          </Link>
-        </nav>
-
-        {/* Action Buttons */}
-        <div className="hidden md:flex items-center gap-3">
+        {/* Desktop Right */}
+        <div className="hidden md:flex items-center gap-4">
           {currentUser ? (
             <>
-              {currentUser.role === 'admin' ? (
-                <Link
-                  href="/admin"
-                  className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-emerald-900 bg-emerald-100 hover:bg-emerald-200 transition-colors rounded-full border border-emerald-200"
-                >
-                  <ShieldCheck className="w-3.5 h-3.5 text-brand-700" />
-                  <span>Admin Hub</span>
+              {currentUser.role === 'admin' && (
+                <Link href="/admin" className="inline-flex items-center gap-1.5 text-[14px] font-medium text-[#69736D] hover:text-[#174D3A] transition-colors font-sans">
+                  <ShieldCheck className="w-4 h-4" /> Admin
                 </Link>
-              ) : null}
+              )}
               <Link
                 href="/dashboard"
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-slate-900 hover:bg-brand-700 text-white text-xs font-bold transition-all shadow-sm group"
+                className="inline-flex items-center gap-2 rounded-full bg-[#174D3A] px-6 py-2.5 text-[14px] font-semibold text-white transition hover:bg-[#287A5B] font-sans shadow-sm"
               >
-                <User className="w-3.5 h-3.5 text-brand-400" />
-                <span>Dashboard ({currentUser.fullName?.split(' ')[0] || currentUser.name?.split(' ')[0] || 'User'})</span>
-                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                <User className="w-4 h-4" />
+                Dashboard
+                <ArrowRight className="w-4 h-4" />
               </Link>
-              <button
-                onClick={handleSignOut}
-                title="Sign Out"
-                className="p-2 rounded-full text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
-              >
+              <button onClick={handleSignOut} title="Sign Out" className="p-2 rounded-full text-[#69736D] hover:text-[#E86F51] hover:bg-[#FCE9E3] transition-colors">
                 <LogOut className="w-4 h-4" />
               </button>
             </>
           ) : (
             <>
-              <Link
-                href="/auth/login"
-                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-slate-700 hover:text-brand-600 transition-colors rounded-full hover:bg-slate-100"
-              >
-                <LogIn className="w-3.5 h-3.5" />
-                <span>Sign In</span>
+              <Link href="/auth/login" className="text-[13px] font-medium text-[#69736D] hover:text-[#18201C] transition-colors font-sans">
+                Login
               </Link>
               <Link
                 href="/auth/register"
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold transition-all shadow-sm group"
+                className="inline-flex items-center gap-1.5 rounded-full bg-[#E86F51] px-5 py-2 text-[13px] font-semibold text-white transition hover:bg-[#cf5e43] font-sans"
               >
-                <UserPlus className="w-3.5 h-3.5" />
-                <span>Create Account</span>
-                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                Join Connect
               </Link>
             </>
           )}
         </div>
 
-        {/* Mobile Hamburger Toggle */}
-        <button
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="md:hidden p-2 rounded-xl text-slate-700 hover:bg-slate-100 focus:outline-none"
-        >
-          {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-        </button>
+        {/* Mobile: Login + Join + Menu */}
+        <div className="flex items-center gap-3 md:hidden">
+          {!currentUser && (
+            <>
+              <Link href="/auth/login" className="text-[13px] font-medium text-[#69736D] font-sans">Login</Link>
+              <Link href="/auth/register" className="inline-flex items-center rounded-full bg-[#E86F51] px-4 py-1.5 text-[12px] font-semibold text-white font-sans">
+                Join Connect
+              </Link>
+            </>
+          )}
+          {currentUser && (
+            <Link href="/dashboard" className="text-[13px] font-medium text-[#174D3A] font-sans">Dashboard</Link>
+          )}
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="p-1.5 rounded-lg text-[#18201C] hover:bg-white"
+          >
+            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+        </div>
       </div>
 
-      {/* Mobile Drawer */}
+      {/* Mobile Dropdown */}
       {mobileMenuOpen && (
-        <div className="md:hidden bg-white border-b border-slate-200 px-6 py-6 space-y-4 animate-in slide-in-from-top-2">
-          <Link
-            href="/#pillars"
-            onClick={() => setMobileMenuOpen(false)}
-            className="block text-base font-medium text-slate-700 hover:text-brand-600"
-          >
+        <div className="md:hidden bg-white border-t border-[#E4E7E2] px-5 py-5 space-y-3 animate-in slide-in-from-top-2 shadow-sm">
+          <Link href="/#pillars" onClick={() => setMobileMenuOpen(false)} className="block text-[14px] font-medium text-[#18201C] py-2 font-sans">
             Explore Connect
           </Link>
-          <Link
-            href="/showcase"
-            onClick={() => setMobileMenuOpen(false)}
-            className="block text-base font-medium text-slate-700 hover:text-brand-600"
-          >
-            Meet, Build & Experience
-          </Link>
-          <Link
-            href="/#how-it-works"
-            onClick={() => setMobileMenuOpen(false)}
-            className="block text-base font-medium text-slate-700 hover:text-brand-600"
-          >
+          <Link href="/#how-it-works" onClick={() => setMobileMenuOpen(false)} className="block text-[14px] font-medium text-[#18201C] py-2 font-sans">
             How It Works
           </Link>
-          <Link
-            href="/#faq"
-            onClick={() => setMobileMenuOpen(false)}
-            className="block text-base font-medium text-slate-700 hover:text-brand-600"
-          >
-            FAQ
-          </Link>
-          <div className="pt-4 border-t border-slate-100 flex flex-col gap-3">
+          <div className="pt-3 border-t border-[#E4E7E2] flex flex-col gap-2.5">
             {currentUser ? (
               <>
-                <Link
-                  href="/dashboard"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="w-full text-center py-3 rounded-xl bg-slate-900 text-white font-bold text-sm shadow-md flex items-center justify-center gap-2"
-                >
-                  <User className="w-4 h-4 text-brand-400" />
-                  <span>Go to Dashboard ({currentUser.fullName?.split(' ')[0] || currentUser.name?.split(' ')[0] || 'User'})</span>
+                <Link href="/dashboard" onClick={() => setMobileMenuOpen(false)} className="w-full text-center py-2.5 rounded-xl bg-[#174D3A] text-white font-semibold text-[13px] font-sans">
+                  Go to Dashboard
                 </Link>
                 {currentUser.role === 'admin' && (
-                  <Link
-                    href="/admin"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="w-full text-center py-2.5 rounded-xl bg-emerald-50 text-emerald-900 border border-emerald-200 font-bold text-sm"
-                  >
-                    Admin Operations Hub
+                  <Link href="/admin" onClick={() => setMobileMenuOpen(false)} className="w-full text-center py-2 rounded-xl bg-[#E4EEE8] text-[#174D3A] font-semibold text-[13px] font-sans">
+                    Admin
                   </Link>
                 )}
                 <button
-                  onClick={() => {
-                    setMobileMenuOpen(false);
-                    handleSignOut();
-                  }}
-                  className="w-full text-center py-2.5 rounded-xl border border-rose-200 text-rose-700 font-bold text-xs"
+                  onClick={() => { setMobileMenuOpen(false); handleSignOut(); }}
+                  className="w-full text-center py-2 rounded-xl border border-[#E4E7E2] text-[#69736D] font-medium text-[13px] font-sans"
                 >
                   Sign Out
                 </button>
               </>
             ) : (
               <>
-                <Link
-                  href="/auth/login"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="w-full text-center py-2.5 rounded-xl border border-slate-200 text-slate-800 font-bold text-sm flex items-center justify-center gap-2"
-                >
-                  <LogIn className="w-4 h-4" />
-                  <span>Sign In</span>
+                <Link href="/auth/login" onClick={() => setMobileMenuOpen(false)} className="w-full text-center py-2.5 rounded-xl border border-[#E4E7E2] text-[#18201C] font-semibold text-[13px] font-sans">
+                  Login
                 </Link>
-                <Link
-                  href="/auth/register"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="w-full text-center py-3 rounded-xl bg-brand-600 text-white font-bold text-sm shadow-md flex items-center justify-center gap-2"
-                >
-                  <UserPlus className="w-4 h-4" />
-                  <span>Create Account (Student / Pro)</span>
+                <Link href="/auth/register" onClick={() => setMobileMenuOpen(false)} className="w-full text-center py-2.5 rounded-xl bg-[#E86F51] text-white font-semibold text-[13px] font-sans">
+                  Join Connect
                 </Link>
               </>
             )}
@@ -204,4 +132,3 @@ export default function Navbar() {
     </header>
   );
 }
-

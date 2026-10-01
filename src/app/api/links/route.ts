@@ -88,6 +88,7 @@ export async function GET(req: Request) {
       accepted,
       pendingIncoming,
       pendingOutgoing,
+      pendingIncomingCount: pendingIncoming.length,
       totalConnected: accepted.length,
     });
   } catch (error: unknown) {
@@ -178,6 +179,19 @@ export async function POST(req: Request) {
       link: `/profile/${reqId}`,
       type: 'link',
     });
+
+    try {
+      const { publishUserEvent } = await import('@/lib/realtime');
+      await publishUserEvent(recipientId, 'connection.request.created', {
+        link: existingLink.toObject(),
+        requester: {
+          _id: requesterUser._id,
+          fullName: requesterUser.fullName || requesterUser.name,
+          avatarUrl: requesterUser.profilePhoto || requesterUser.avatarUrl,
+          university: requesterUser.university || requesterUser.organization,
+        },
+      });
+    } catch {}
 
     return NextResponse.json({
       success: true,

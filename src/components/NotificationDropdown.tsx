@@ -33,8 +33,15 @@ export default function NotificationDropdown() {
 
   useEffect(() => {
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 15000);
-    return () => clearInterval(interval);
+    const handleRealtime = () => {
+      fetchNotifications();
+    };
+    window.addEventListener('aptivo:realtime-event', handleRealtime);
+    const interval = setInterval(fetchNotifications, 20000);
+    return () => {
+      window.removeEventListener('aptivo:realtime-event', handleRealtime);
+      clearInterval(interval);
+    };
   }, []);
 
   useEffect(() => {
@@ -83,11 +90,11 @@ export default function NotificationDropdown() {
       <button
         onClick={() => setIsOpen(!isOpen)}
         aria-label="Notifications"
-        className="relative p-2.5 rounded-full bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:border-slate-300 transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+        className="relative grid h-9 w-9 lg:h-10 lg:w-10 place-items-center rounded-xl text-[#69736D] hover:text-[#174D3A] hover:bg-[#E4EEE8] transition-colors focus:outline-none font-sans"
       >
-        <Bell className="w-5 h-5" />
+        <Bell className="w-[18px] h-[18px] lg:w-[20px] lg:h-[20px]" />
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-600 text-[10px] font-bold text-white shadow-sm ring-2 ring-white animate-pulse">
+          <span className="absolute top-0.5 right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#E05A47] text-[9px] font-bold text-white shadow-xs ring-2 ring-white">
             {unreadCount}
           </span>
         )}

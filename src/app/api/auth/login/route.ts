@@ -39,14 +39,25 @@ export async function POST(req: Request) {
       );
     }
 
-    const storedPassword = user.passwordHash || user.password || 'aptivo.co';
+    const storedPassword = user.passwordHash || user.password;
 
-    // Verify using bcrypt or fallback for plaintext demo seed
+    if (!storedPassword) {
+      return NextResponse.json(
+        { error: 'Account credentials are not configured. Please contact support.' },
+        { status: 401 }
+      );
+    }
+
+    // Verify using bcrypt only — no plaintext fallback
     let isValid = false;
     if (storedPassword.startsWith('$2a$') || storedPassword.startsWith('$2b$')) {
       isValid = await bcrypt.compare(providedPassword, storedPassword);
     } else {
-      isValid = providedPassword === storedPassword || providedPassword === 'aptivo.co';
+      // Legacy plaintext — reject and instruct reset
+      return NextResponse.json(
+        { error: 'Your account password is stored insecurely. Please contact an admin to reset it.' },
+        { status: 401 }
+      );
     }
 
     if (!isValid) {

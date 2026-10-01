@@ -22,6 +22,8 @@ import {
   X,
   Clock,
   Eye,
+  EyeOff,
+  Lock,
   Trash2,
   Edit,
   Send,
@@ -45,6 +47,179 @@ import {
 } from 'lucide-react';
 import StatusPill from '@/components/StatusPill';
 
+// ── Settings Tab Sub-Component ────────────────────────────────────────────────
+
+function SettingsTab({ onRefresh: _onRefresh }: { onRefresh: () => void }) {
+  const [seedResult, setSeedResult] = useState<null | string>(null);
+  const [loadingSeed, setLoadingSeed] = useState(false);
+
+  // Change password form
+  const [currentPw, setCurrentPw] = useState('');
+  const [newPw, setNewPw] = useState('');
+  const [confirmPw, setConfirmPw] = useState('');
+  const [pwMsg, setPwMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
+  const [loadingPw, setLoadingPw] = useState(false);
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+
+  const runSeed = async () => {
+    setLoadingSeed(true);
+    setSeedResult(null);
+    try {
+      const res = await fetch('/api/seed', { method: 'POST' });
+      const d = await res.json();
+      setSeedResult(d.message || (d.success ? 'Admin account verified.' : d.error));
+    } finally { setLoadingSeed(false); }
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPwMsg(null);
+    if (newPw !== confirmPw) { setPwMsg({ type: 'err', text: 'New passwords do not match.' }); return; }
+    if (newPw.length < 8) { setPwMsg({ type: 'err', text: 'Password must be at least 8 characters.' }); return; }
+    setLoadingPw(true);
+    try {
+      const res = await fetch('/api/admin/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword: currentPw, newPassword: newPw }),
+      });
+      const d = await res.json();
+      if (d.success) {
+        setPwMsg({ type: 'ok', text: 'Password changed successfully.' });
+        setCurrentPw(''); setNewPw(''); setConfirmPw('');
+      } else {
+        setPwMsg({ type: 'err', text: d.error || 'Failed to change password.' });
+      }
+    } finally { setLoadingPw(false); }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+        <div>
+          <h3 className="text-xl font-extrabold text-slate-900">System Maintenance</h3>
+          <p className="text-xs text-slate-500">Manage the admin account and system configuration.</p>
+        </div>
+      </div>
+
+      {/* Admin Account Info */}
+      <div className="p-5 rounded-3xl bg-slate-50 border border-slate-200/80 flex items-center gap-4">
+        <div className="w-12 h-12 rounded-2xl bg-darkpine-900 flex items-center justify-center shrink-0">
+          <ShieldCheck className="w-6 h-6 text-brand-400" />
+        </div>
+        <div>
+          <p className="text-sm font-extrabold text-slate-900">Aptivo Admin</p>
+          <p className="text-xs text-slate-500 font-mono">admin@connect.aptivo</p>
+          <p className="text-[10px] text-slate-400 mt-0.5">Role: Admin · Full access</p>
+        </div>
+      </div>
+
+      {/* Change Password */}
+      <div className="p-6 rounded-3xl bg-white border border-slate-200/80 space-y-4">
+        <h4 className="font-extrabold text-slate-900 text-sm flex items-center gap-2">
+          <Lock className="w-4 h-4 text-slate-600" />
+          Change Admin Password
+        </h4>
+
+        <form onSubmit={handleChangePassword} className="space-y-3">
+          {/* Current password */}
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">Current Password</label>
+            <div className="relative">
+              <input
+                type={showCurrent ? 'text' : 'password'}
+                required
+                value={currentPw}
+                onChange={(e) => setCurrentPw(e.target.value)}
+                placeholder="••••••••"
+                className="w-full pr-10 pl-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+              />
+              <button type="button" onClick={() => setShowCurrent(!showCurrent)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                {showCurrent ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+              </button>
+            </div>
+          </div>
+
+          {/* New password */}
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">New Password</label>
+            <div className="relative">
+              <input
+                type={showNew ? 'text' : 'password'}
+                required
+                value={newPw}
+                onChange={(e) => setNewPw(e.target.value)}
+                placeholder="Min. 8 characters"
+                className="w-full pr-10 pl-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+              />
+              <button type="button" onClick={() => setShowNew(!showNew)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                {showNew ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+              </button>
+            </div>
+          </div>
+
+          {/* Confirm */}
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">Confirm New Password</label>
+            <input
+              type="password"
+              required
+              value={confirmPw}
+              onChange={(e) => setConfirmPw(e.target.value)}
+              placeholder="••••••••"
+              className="w-full pl-3 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+            />
+          </div>
+
+          {pwMsg && (
+            <div className={`p-3 rounded-xl text-xs font-semibold flex items-center gap-2 ${
+              pwMsg.type === 'ok'
+                ? 'bg-emerald-50 border border-emerald-200 text-emerald-800'
+                : 'bg-rose-50 border border-rose-200 text-rose-700'
+            }`}>
+              {pwMsg.type === 'ok' ? <CheckCircle2 className="w-3.5 h-3.5 shrink-0" /> : <AlertTriangle className="w-3.5 h-3.5 shrink-0" />}
+              {pwMsg.text}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={loadingPw}
+            className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-brand-600 text-white text-xs font-bold transition-colors disabled:opacity-50"
+          >
+            {loadingPw ? 'Saving...' : 'Update Password'}
+          </button>
+        </form>
+      </div>
+
+      {/* Admin Bootstrap */}
+      <div className="p-6 rounded-3xl bg-emerald-50 border border-emerald-200/80 space-y-3">
+        <h4 className="font-extrabold text-slate-900 text-sm flex items-center gap-2">
+          <ShieldCheck className="w-4 h-4 text-emerald-700" />
+          Emergency Bootstrap
+        </h4>
+        <p className="text-xs text-slate-600">
+          Resets the admin account password to the value in <code className="bg-emerald-100 px-1 rounded">ADMIN_BOOTSTRAP_PASSWORD</code> env var. Use only if locked out.
+        </p>
+        <button
+          onClick={runSeed}
+          disabled={loadingSeed}
+          className="px-4 py-2 rounded-xl bg-emerald-700 text-white text-xs font-bold hover:bg-emerald-800 transition-colors disabled:opacity-50"
+        >
+          {loadingSeed ? 'Running...' : 'Bootstrap Admin'}
+        </button>
+        {seedResult && (
+          <div className="p-3 rounded-xl bg-white border border-emerald-200 text-xs text-emerald-800 font-mono">{seedResult}</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+
 // ── Admin Tabs ─────────────────────────────────────────────────────────────
 
 type AdminTab =
@@ -58,6 +233,7 @@ type AdminTab =
   | 'partners'
   | 'notifications'
   | 'settings';
+
 
 export default function AdminPortal() {
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
@@ -793,33 +969,7 @@ export default function AdminPortal() {
 
           {/* TAB 8: SETTINGS & DB */}
           {activeTab === 'settings' && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-                <div>
-                  <h3 className="text-xl font-extrabold text-slate-900">Database & System Maintenance</h3>
-                  <p className="text-xs text-slate-500">Manage MongoDB state, seed records, and clean dummy data.</p>
-                </div>
-              </div>
-
-              <div className="p-6 rounded-3xl bg-slate-50 border border-slate-200/80 space-y-4">
-                <h4 className="font-extrabold text-slate-900 text-sm">Purge Dummy Data</h4>
-                <p className="text-xs text-slate-600">
-                  Clean any mock or test records from collections while preserving the Admin account and real user profiles.
-                </p>
-                <button
-                  onClick={async () => {
-                    if (!confirm('Purge dummy records and clean database?')) return;
-                    const res = await fetch('/api/admin/clean-dummy-data', { method: 'POST' });
-                    const d = await res.json();
-                    alert(d.message || 'Database cleaned.');
-                    loadAllData();
-                  }}
-                  className="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold hover:bg-rose-700 transition-colors"
-                >
-                  Clean Dummy Data
-                </button>
-              </div>
-            </div>
+            <SettingsTab onRefresh={loadAllData} />
           )}
         </main>
       </div>

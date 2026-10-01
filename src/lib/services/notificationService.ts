@@ -58,7 +58,7 @@ export class NotificationEngine {
     const recipientPhone = user?.whatsapp || user?.phone || '+92 300 1234567';
 
     // 1. In-App Notification (Database)
-    await Notification.create({
+    const notificationDoc = await Notification.create({
       userId: payload.userId,
       title: payload.title,
       message: payload.message,
@@ -66,6 +66,12 @@ export class NotificationEngine {
       link: payload.link || '/dashboard',
       isRead: false,
     });
+
+    // 1b. Publish Ably Realtime Notification Event
+    try {
+      const { publishUserEvent } = await import('../realtime');
+      await publishUserEvent(payload.userId, 'notification.created', notificationDoc.toObject());
+    } catch {}
 
     // 2. Multi-Channel WhatsApp Template Formatter
     const whatsAppPreview = `*Aptivo Connect Alert*\n\n${payload.title}\n\n${payload.message}\n${

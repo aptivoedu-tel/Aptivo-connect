@@ -169,20 +169,109 @@ export default function MessagesPage() {
     }
   }, [searchParams, conversations, currentUserEmail, activeConv?._id]);
 
-  // Ably delivers persisted messages live. Initial/fallback fetches remain the source-of-truth recovery path.
+  const activeConvRef = useRef<IConversation | null>(null);
   useEffect(() => {
-    if (!activeConv) return;
-    const realtime = new Ably.Realtime({ authUrl: '/api/realtime/token', authMethod: 'GET' });
-    const channel = realtime.channels.get(`conversation:${activeConv._id}`);
-    const onMessage = (event: { data?: unknown }) => {
-      const incoming = event.data as IMessage | undefined;
-      if (!incoming?._id || !incoming.content) return;
-      setMessages((previous) => previous.some((message) => message._id === incoming._id) ? previous : [...previous, incoming]);
-      setConversations((previous) => previous.map((conversation) => conversation._id === activeConv._id ? { ...conversation, lastMessage: incoming.content, lastMessageAt: incoming.createdAt } : conversation).sort((a, b) => new Date(b.lastMessageAt || 0).getTime() - new Date(a.lastMessageAt || 0).getTime()));
-    };
-    channel.subscribe('message.created', onMessage);
-    return () => { channel.unsubscribe('message.created', onMessage); realtime.close(); };
+    activeConvRef.current = activeConv;
   }, [activeConv]);
+
+  const parseId = (val: any): string => {
+    if (!val) return '';
+    if (typeof val === 'string') return val;
+    if (typeof val === 'object') {
+      if (val._id) return parseId(val._id);
+      if (val.$oid) return parseId(val.$oid);
+      if (val.toString) return val.toString();
+    }
+    return String(val);
+  };
+
+  const handleIncomingMessage = (incoming: IMessage) => {
+    if (!incoming || !incoming.content) return;
+    const incId = parseId(incoming._id);
+    const incConvId = parseId(incoming.conversationId);
+    const activeId = parseId(activeConvRef.current?._id);
+
+    // 1. If currently open conversation matches incoming message, append immediately
+    if (activeId && activeId === incConvId) {
+      setMessages((previous) => {
+        const exists = previous.some((m) => parseId(m._id) === incId);
+        if (exists) return previous;
+        return [...previous, incoming];
+      });
+    }
+
+    // 2. Always update the conversations list (latest message preview + timestamp) and re-sort
+    setConversations((previous) => {
+      const exists = previous.some((c) => parseId(c._id) === incConvId);
+      if (!exists) {
+        if (currentUserEmail) loadConversations(currentUserEmail, currentUserId);
+        return previous;
+      }
+      return previous
+        .map((c) =>
+          parseId(c._id) === incConvId
+            ? { ...c, lastMessage: incoming.content, lastMessageAt: incoming.createdAt || new Date().toISOString() }
+            : c
+        )
+        .sort(
+          (a, b) =>
+            new Date(b.lastMessageAt || 0).getTime() - new Date(a.lastMessageAt || 0).getTime()
+        );
+    });
+  };
+
+  // 1. Ably channel subscription for the active open conversation
+  useEffect(() => {
+    if (!activeConv?._id) return;
+    const convId = parseId(activeConv._id);
+    let realtime: Ably.Realtime | null = null;
+    try {
+      realtime = new Ably.Realtime({ authUrl: '/api/realtime/token', authMethod: 'GET' });
+      const channel = realtime.channels.get(`conversation:${convId}`);
+      const onMessage = (event: { data?: unknown }) => {
+        if (event.data) {
+          handleIncomingMessage(event.data as IMessage);
+        }
+      };
+      channel.subscribe('message.created', onMessage);
+      return () => {
+        channel.unsubscribe('message.created', onMessage);
+        realtime?.close();
+      };
+    } catch (e) {
+      console.error('Ably conversation subscription error:', e);
+    }
+  }, [activeConv?._id]);
+
+  // 2. Global realtime event listener (for user channel messages)
+  useEffect(() => {
+    const handleRealtime = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.name === 'message.created' && detail?.data) {
+        handleIncomingMessage(detail.data as IMessage);
+      }
+    };
+    window.addEventListener('aptivo:realtime-event', handleRealtime);
+    return () => window.removeEventListener('aptivo:realtime-event', handleRealtime);
+  }, []);
+
+  // 3. Focus/reconnect reconciliation from MongoDB source-of-truth
+  useEffect(() => {
+    const handleFocus = () => {
+      if (activeConvRef.current?._id && currentUserEmail) {
+        fetch(`/api/messages?conversationId=${activeConvRef.current._id}&email=${encodeURIComponent(currentUserEmail)}`)
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.messages) {
+              setMessages(data.messages);
+            }
+          })
+          .catch(() => {});
+      }
+    };
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [currentUserEmail]);
 
   // Scroll to bottom
   useEffect(() => {
@@ -248,91 +337,71 @@ export default function MessagesPage() {
 
   const activePartner = getOtherParticipant(activeConv);
 
-  return (
-    <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden h-[calc(100dvh-150px)] min-h-[540px] flex flex-col">
-      <div className="flex flex-1 overflow-hidden">
-        {/* Left Sidebar: Conversations List */}
-        <aside
-          className={`w-full md:w-80 lg:w-96 border-r border-slate-200/80 flex flex-col shrink-0 bg-slate-50/50 ${
-            activeConv ? 'hidden md:flex' : 'flex'
-          }`}
-        >
-          {/* Header */}
-          <div className="p-4 sm:p-5 border-b border-slate-200/80 space-y-3 bg-white">
-            <div className="flex items-center justify-between">
-              <h2 className="font-serif font-normal text-[30px] sm:text-[34px] leading-tight text-[#18201C] flex items-center gap-2">
-                <MessageSquare className="w-6 h-6 text-brand-600" />
-                <span>Chats</span>
-              </h2>
-              <Link
-                href="/dashboard/people"
-                className="text-xs font-semibold text-brand-600 hover:underline font-sans"
-              >
-                + New Chat
-              </Link>
-            </div>
+  /* Format time for conversation list */
+  const formatTime = (dateStr?: string) => {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now.getTime() - d.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    if (diffDays === 0) return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return d.toLocaleDateString([], { weekday: 'short' });
+    return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  };
 
-            <div className="relative">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search chats"
-                className="aptivo-input w-full min-h-11 rounded-xl pl-9 pr-3 text-sm"
-              />
+  return (
+    <div className="overflow-hidden rounded-[18px] border border-[#E4E7E2] bg-white h-[calc(100dvh-140px)] min-h-[500px] flex flex-col">
+      <div className="flex flex-1 overflow-hidden">
+        {/* ── CONVERSATION LIST (Screen 5 left) ── */}
+        <aside className={`w-full md:w-80 lg:w-[22rem] border-r border-[#E4E7E2] flex flex-col shrink-0 bg-white ${activeConv ? 'hidden md:flex' : 'flex'}`}>
+          {/* Header */}
+          <div className="px-5 pt-5 pb-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <h1 className="font-serif font-normal text-[28px] leading-tight text-[#18201C]">Chats</h1>
+              <div className="flex items-center gap-1">
+                <button onClick={() => setSearchQuery(searchQuery ? '' : ' ')} className="grid h-9 w-9 place-items-center rounded-full text-[#18201C] hover:bg-[#F7F6F1] transition-colors" aria-label="Search chats">
+                  <Search className="h-[18px] w-[18px]" />
+                </button>
+                <Link href="/dashboard/people" className="grid h-9 w-9 place-items-center rounded-full text-[#18201C] hover:bg-[#F7F6F1] transition-colors" aria-label="New chat">
+                  <ExternalLink className="h-[18px] w-[18px]" />
+                </Link>
+              </div>
             </div>
+            {searchQuery !== '' && (
+              <div className="relative">
+                <Search className="w-4 h-4 text-[#69736D] absolute left-3 top-1/2 -translate-y-1/2" />
+                <input type="text" value={searchQuery.trim()} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search chats..." autoFocus className="aptivo-input w-full min-h-10 rounded-xl pl-9 pr-3 text-[13px]" />
+              </div>
+            )}
           </div>
 
-          {/* List */}
-          <div className="flex-1 divide-y divide-[#E4E7E2] overflow-y-auto">
+          {/* Conversation rows */}
+          <div className="flex-1 overflow-y-auto">
             {loading ? (
-              <div className="py-12 text-center text-slate-400 text-xs">Loading conversations...</div>
+              <div className="py-12 text-center text-[13px] text-[#69736D]">Loading conversations...</div>
             ) : filteredConversations.length === 0 ? (
-              <div className="p-8 text-center space-y-2">
-                <p className="text-xs font-bold text-slate-700">No conversations yet</p>
-                <p className="text-[11px] text-slate-500">
-                  Discover builders in People or Links to start a chat.
-                </p>
-                <Link
-                  href="/dashboard/people"
-                  className="inline-block mt-2 px-3 py-1.5 rounded-xl bg-brand-600 text-white text-[11px] font-bold"
-                >
-                  Discover People
-                </Link>
+              <div className="px-5 py-10 text-center space-y-2">
+                <p className="text-[13px] font-semibold text-[#18201C]">No conversations yet</p>
+                <p className="text-[12px] text-[#69736D] font-sans">Find people through Campus or Build to start chatting.</p>
+                <Link href="/dashboard/people" className="inline-block mt-2 px-4 py-2 rounded-full bg-[#174D3A] text-white text-[12px] font-semibold font-sans">Discover People</Link>
               </div>
             ) : (
               filteredConversations.map((conv) => {
                 const partner = getOtherParticipant(conv);
                 const displayName = partner?.fullName || partner?.name || 'Builder';
                 const isSelected = activeConv?._id === conv._id;
-
                 return (
-                  <button
-                    key={conv._id}
-                    onClick={() => selectConversation(conv)}
-                    className={`flex w-full items-center gap-3 p-4 text-left transition-colors ${
-                      isSelected ? 'border-l-4 border-l-[#287A5B] bg-[#E4EEE8]/70' : 'hover:bg-[#F7F6F1]'
-                    }`}
+                  <button key={conv._id} onClick={() => selectConversation(conv)}
+                    className={`flex w-full items-center gap-3 px-5 py-3.5 text-left transition-colors border-b border-[#E4E7E2]/60 ${isSelected ? 'bg-[#E4EEE8]/50' : 'hover:bg-[#F7F6F1]'}`}
                   >
-                    <Avatar src={partner?.profilePhoto || partner?.avatarUrl} name={displayName} size={44}/>
+                    <Avatar src={partner?.profilePhoto || partner?.avatarUrl} name={displayName} size={44} />
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-1">
-                        <span className="truncate text-xs font-extrabold text-[#18201C]">
-                          {displayName}
-                        </span>
-                        {conv.lastMessageAt && (
-                          <span className="shrink-0 text-[10px] text-[#69736D]">
-                            {new Date(conv.lastMessageAt).toLocaleTimeString([], {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
-                          </span>
-                        )}
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="truncate text-[14px] font-semibold text-[#18201C] font-sans">{displayName}</span>
+                        <span className="shrink-0 text-[11px] text-[#69736D] font-sans">{formatTime(conv.lastMessageAt)}</span>
                       </div>
-                      <p className="mt-0.5 truncate text-[11px] text-[#69736D]">
-                        {conv.lastMessage || 'Click to view messages'}
-                      </p>
+                      <p className="mt-0.5 truncate text-[12px] text-[#69736D] font-sans">{conv.lastMessage || 'Start a conversation'}</p>
                     </div>
                   </button>
                 );
@@ -341,81 +410,47 @@ export default function MessagesPage() {
           </div>
         </aside>
 
-        {/* Right Chat Area */}
+        {/* ── ACTIVE CHAT AREA ── */}
         <main className={`flex-1 flex flex-col bg-white ${!activeConv ? 'hidden md:flex' : 'flex'}`}>
           {activeConv && activePartner ? (
             <>
-              {/* Chat Header */}
-              <div className="flex items-center justify-between gap-3 border-b border-[#E4E7E2] bg-white p-4">
+              {/* Chat header */}
+              <div className="flex items-center justify-between gap-3 border-b border-[#E4E7E2] bg-white px-4 py-3">
                 <div className="flex items-center gap-3 min-w-0">
-                  <button
-                    onClick={() => {
-                      if (searchParams.get('conv')) backToChats();
-                      else setActiveConv(null);
-                    }}
-                    className="md:hidden p-1.5 rounded-xl text-slate-500 hover:bg-slate-100"
-                  >
+                  <button onClick={() => { if (searchParams.get('conv')) backToChats(); else setActiveConv(null); }} className="md:hidden p-1.5 rounded-full text-[#69736D] hover:bg-[#F7F6F1]">
                     <ArrowLeft className="w-5 h-5" />
                   </button>
-                  <Avatar src={activePartner.profilePhoto || activePartner.avatarUrl} name={activePartner.fullName || activePartner.name} size={40}/>
+                  <Avatar src={activePartner.profilePhoto || activePartner.avatarUrl} name={activePartner.fullName || activePartner.name} size={38} />
                   <div className="min-w-0">
-                    <h3 className="truncate text-sm font-extrabold text-[#18201C]">
-                      {activePartner.fullName || activePartner.name}
-                    </h3>
-                    <p className="truncate text-[11px] text-[#69736D]">
-                      {activePartner.university || activePartner.organization || activePartner.jobTitle || 'Aptivo Builder'}
-                    </p>
+                    <h3 className="truncate text-[14px] font-semibold text-[#18201C] font-sans">{activePartner.fullName || activePartner.name}</h3>
+                    <p className="truncate text-[11px] text-[#69736D] font-sans">{activePartner.university || activePartner.organization || activePartner.jobTitle || 'Aptivo Connect'}</p>
                   </div>
                 </div>
-
-                <div className="flex items-center gap-2">
-                  <Link
-                    href={`/profile/${activePartner._id}`}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold"
-                  >
-                    <span>Profile</span>
-                    <ExternalLink className="w-3 h-3" />
-                  </Link>
-                </div>
+                <Link href={`/profile/${activePartner._id}`} className="grid h-9 w-9 place-items-center rounded-full text-[#69736D] hover:bg-[#F7F6F1] transition-colors" aria-label="View profile">
+                  <User className="h-[18px] w-[18px]" />
+                </Link>
               </div>
 
-              {/* Messages Scroll Area */}
-              <div className="flex-1 space-y-3 overflow-y-auto bg-[#F7F6F1] p-4 sm:p-6">
+              {/* Messages */}
+              <div className="flex-1 space-y-2.5 overflow-y-auto bg-[#F7F6F1] p-4 sm:p-5">
                 {messages.length === 0 ? (
-                  <div className="py-20 text-center space-y-2">
-                    <Sparkles className="w-8 h-8 text-brand-500 mx-auto" />
-                    <p className="text-xs font-bold text-slate-800">
-                      Conversation with {activePartner.fullName || activePartner.name}
-                    </p>
-                    <p className="text-[11px] text-slate-500">
-                      Say hello, propose a BUILD project collaboration, or share knowledge.
-                    </p>
+                  <div className="py-16 text-center space-y-2">
+                    <Sparkles className="w-7 h-7 text-[#287A5B] mx-auto" />
+                    <p className="text-[13px] font-semibold text-[#18201C] font-sans">Start your conversation</p>
+                    <p className="text-[12px] text-[#69736D] font-sans">Say hello or propose a collaboration.</p>
                   </div>
                 ) : (
                   messages.map((msg) => {
-                    const isMine =
-                      msg.senderId === currentUserId ||
-                      (msg.senderId as any)?._id?.toString() === currentUserId;
-
+                    const isMine = msg.senderId === currentUserId || (msg.senderId as any)?._id?.toString() === currentUserId;
                     return (
-                      <div
-                        key={msg._id}
-                        className={`flex flex-col ${isMine ? 'items-end' : 'items-start'}`}
-                      >
-                        <div
-                          className={`max-w-[80%] sm:max-w-[70%] rounded-2xl p-3.5 text-xs sm:text-sm leading-relaxed shadow-xs ${
-                            isMine
-                              ? 'bg-[#174D3A] text-white rounded-br-xs'
-                              : 'border border-[#E4E7E2] bg-white text-[#18201C] rounded-bl-xs'
-                          }`}
-                        >
+                      <div key={msg._id} className={`flex flex-col ${isMine ? 'items-end' : 'items-start'}`}>
+                        <div className={`max-w-[80%] sm:max-w-[70%] rounded-2xl px-4 py-3 text-[14px] leading-relaxed font-sans ${
+                          isMine ? 'bg-[#E4EEE8] text-[#18201C] rounded-br-md' : 'bg-white border border-[#E4E7E2] text-[#18201C] rounded-bl-md'
+                        }`}>
                           <p className="whitespace-pre-wrap">{msg.content}</p>
                         </div>
-                        <span className="text-[9px] text-slate-400 mt-1 px-1">
-                          {new Date(msg.createdAt).toLocaleTimeString([], {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
+                        <span className="text-[10px] text-[#69736D] mt-1 px-1 font-sans">
+                          {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
                     );
@@ -424,35 +459,19 @@ export default function MessagesPage() {
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Message Input Box */}
-              <form
-                onSubmit={handleSendMessage}
-                className="flex items-center gap-2 border-t border-[#E4E7E2] bg-white p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:p-4"
-              >
-                <input
-                  type="text"
-                  value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
-                  placeholder="Message…"
-                  className="aptivo-input min-h-11 flex-1 rounded-2xl px-4 text-sm"
-                />
-                <button
-                  type="submit"
-                  disabled={!inputText.trim() || sending}
-                  className="flex shrink-0 items-center gap-1.5 rounded-2xl bg-[#174D3A] px-5 py-3 text-xs font-bold text-white transition hover:bg-[#287A5B] disabled:opacity-50"
-                >
-                  <Send className="w-4 h-4" />
-                  <span className="hidden sm:inline">Send</span>
+              {/* Composer */}
+              <form onSubmit={handleSendMessage} className="flex items-center gap-2 border-t border-[#E4E7E2] bg-white px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+                <input type="text" value={inputText} onChange={(e) => setInputText(e.target.value)} placeholder="Message…" className="aptivo-input min-h-11 flex-1 rounded-full px-5 text-[14px] font-sans" />
+                <button type="submit" disabled={!inputText.trim() || sending} className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#174D3A] text-white transition hover:bg-[#287A5B] disabled:opacity-40">
+                  <Send className="w-[18px] h-[18px]" />
                 </button>
               </form>
             </>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-3 text-slate-400">
-              <div className="grid h-16 w-16 place-items-center rounded-2xl bg-[#E4EEE8] text-[#174D3A]"><MessageSquare className="h-7 w-7" /></div>
-              <h3 className="aptivo-display text-2xl font-semibold text-[#18201C]">Start a conversation</h3>
-              <p className="max-w-sm text-sm text-[#69736D]">
-                Find someone through Campus, Connections or Build.
-              </p>
+            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-3">
+              <div className="grid h-14 w-14 place-items-center rounded-2xl bg-[#E4EEE8] text-[#174D3A]"><MessageSquare className="h-6 w-6" /></div>
+              <h3 className="font-serif font-normal text-[22px] text-[#18201C]">Start a conversation</h3>
+              <p className="max-w-sm text-[13px] text-[#69736D] font-sans">Find someone through Campus, Connections or Build.</p>
             </div>
           )}
         </main>

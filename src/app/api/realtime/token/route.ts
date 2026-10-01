@@ -5,14 +5,20 @@ import { authError, requireUser } from '@/lib/auth';
 import { conversationChannel, createRealtimeToken } from '@/lib/realtime';
 
 export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
-    const user = await requireUser(); await connectToDatabase();
+    const user = await requireUser();
+    await connectToDatabase();
     const conversations = await Conversation.find({ participants: user._id }).select('_id');
-    const tokenRequest = await createRealtimeToken(String(user._id), conversations.map((conversation) => conversationChannel(String(conversation._id))));
+    const conversationChannels = conversations.map((c) => conversationChannel(String(c._id)));
+    const tokenRequest = await createRealtimeToken(String(user._id), conversationChannels);
     return NextResponse.json(tokenRequest);
   } catch (error) {
-    const auth = authError(error); const message = error instanceof Error && error.message.includes('ABLY_API_KEY') ? 'Realtime chat is not configured yet.' : 'Unable to authorize realtime chat.';
+    const auth = authError(error);
+    const message = error instanceof Error && error.message.includes('ABLY_API_KEY')
+      ? 'Realtime is not configured yet.'
+      : 'Unable to authorize realtime connection.';
     return NextResponse.json(auth || { error: message }, { status: auth?.status || 503 });
   }
 }

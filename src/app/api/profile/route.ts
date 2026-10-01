@@ -4,6 +4,7 @@ import User from '@/lib/models/User';
 import Project from '@/lib/models/Project';
 import Experience from '@/lib/models/Experience';
 import MeetRequest from '@/lib/models/MeetRequest';
+import ProfileRecord from '@/lib/models/ProfileRecord';
 import { calculateProfileCompletion } from '@/lib/profileUtils';
 import { authError, requireUser } from '@/lib/auth';
 
@@ -19,31 +20,70 @@ function validExternalLinks(value: unknown) {
 
 export async function GET(req: Request) {
   try {
-    const user = await requireUser();
+    const { searchParams } = new URL(req.url);
+    const targetId = searchParams.get('id') || searchParams.get('userId');
     await connectToDatabase();
+
+    let user: any;
+    let isOwnProfile = false;
+    const sessionUser = await requireUser().catch(() => null);
+
+    if (targetId) {
+      // Fetch requested Profile Owner by ObjectId or email
+      const isObjectId = /^[0-9a-fA-F]{24}$/.test(targetId);
+      user = await User.findOne({
+        $or: [
+          ...(isObjectId ? [{ _id: targetId }] : []),
+          { email: targetId.toLowerCase() },
+        ],
+      });
+
+      if (!user) {
+        return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      }
+
+      if (sessionUser && sessionUser._id.toString() === user._id.toString()) {
+        isOwnProfile = true;
+      }
+
+      if (!isOwnProfile && user.privacy?.isPublic === false) {
+        return NextResponse.json({ error: 'This profile is private.' }, { status: 403 });
+      }
+    } else {
+      // Fetch authenticated user's own profile
+      if (!sessionUser) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+      user = sessionUser;
+      isOwnProfile = true;
+    }
 
     const completion = calculateProfileCompletion(user.toObject());
 
-    // Fetch user's verified platform activity
-    const [userProjects, userMeets, userExperiences] = await Promise.all([
+    // Fetch user's verified platform activity (strictly scoped to target user's ID)
+    const [userProjects, userMeets, userExperiences, userRecords] = await Promise.all([
       Project.find({
         $or: [{ ownerId: user._id }, { 'members.userId': user._id.toString() }],
       }),
       MeetRequest.find({ studentId: user._id }),
       Experience.find({ 'enrolledStudents.studentId': user._id }),
+      ProfileRecord.find({ userId: user._id, ...(isOwnProfile ? {} : { visibility: 'public' }) }).sort({ endDate: -1, createdAt: -1 }),
     ]);
 
     return NextResponse.json({
       user,
       completion,
+      isOwnProfile,
       activity: {
         projects: userProjects,
         meets: userMeets,
         experiences: userExperiences,
+        records: userRecords,
       },
     });
   } catch (error: unknown) {
-    const auth = authError(error); return NextResponse.json(auth || { error: (error as Error).message }, { status: auth?.status || 500 });
+    const auth = authError(error);
+    return NextResponse.json(auth || { error: (error as Error).message }, { status: auth?.status || 500 });
   }
 }
 

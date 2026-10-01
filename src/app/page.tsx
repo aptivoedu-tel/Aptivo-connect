@@ -1,36 +1,136 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowDownRight, ArrowRight, Building2, Compass, Hammer, Sparkles, UsersRound } from 'lucide-react';
+import { ArrowRight, Building2, Hammer, Sparkles, TrendingUp, UsersRound } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 
 const pillars = [
-  { name: 'Meet', title: 'Good conversations move ideas forward.', body: 'Join talks, workshops and small-group sessions with people working in your field.', href: '/dashboard/meetup', icon: UsersRound, tone: 'bg-[#E4EEE8] text-[#174D3A]' },
-  { name: 'Build', title: 'Make something with a team.', body: 'Find collaborators, share what you bring and work on projects with a clear purpose.', href: '/dashboard/build', icon: Hammer, tone: 'bg-[#FCE9E3] text-[#A94431]' },
-  { name: 'Experience', title: 'See where the work happens.', body: 'Step into companies, labs and workplaces through curated visits and experiences.', href: '/dashboard/experience', icon: Building2, tone: 'bg-[#E4EEE8] text-[#174D3A]' },
+  { name: 'Meet', label: 'People', icon: UsersRound, desc: 'Join talks, workshops and sessions with people in your field.' },
+  { name: 'Build', label: 'Projects', icon: Hammer, desc: 'Find collaborators and work on projects with real purpose.' },
+  { name: 'Experience', label: 'Opportunities', icon: Building2, desc: 'Step into companies, labs and workplaces through curated visits.' },
+  { name: 'Grow', label: 'Your Profile', icon: TrendingUp, desc: 'Your skills, work and verified participation — all in one place.' },
 ];
 
 export default function LandingPage() {
-  return <main className="min-h-screen bg-[#F7F6F1] text-[#18201C]"><Navbar/>
-    <section className="relative overflow-hidden bg-[#F7F6F1]">
-      <div className="pointer-events-none absolute -right-24 -top-32 h-[34rem] w-[34rem] rounded-full border border-[#287A5B]/25 sm:right-0 sm:top-[-10rem]"/><div className="pointer-events-none absolute right-8 top-20 h-80 w-80 rounded-full border border-[#287A5B]/25 sm:right-20"/><div className="pointer-events-none absolute right-32 top-36 h-48 w-48 rounded-full border border-[#287A5B]/20 sm:right-48"/>
-      <div className="relative mx-auto grid max-w-7xl items-center gap-10 px-5 py-14 sm:px-8 sm:py-20 lg:min-h-[570px] lg:grid-cols-[1fr_0.9fr] lg:gap-12 lg:px-10">
-        <div className="max-w-2xl"><p className="inline-flex items-center gap-2 text-sm font-medium text-[#174D3A]"><span className="grid h-7 w-7 place-items-center rounded-lg bg-[#E4EEE8]"><Sparkles className="h-4 w-4"/></span>Aptivo Connect</p><h1 className="font-serif font-normal text-[46px] sm:text-[52px] leading-[1.02] tracking-tight mt-6">Meet.<br/>Build.<br/><span className="text-[#174D3A]">Experience.</span></h1><p className="mt-5 max-w-xl text-base leading-7 text-[#69736D] sm:text-lg font-sans">Connect with people, collaborate on work that matters, and find experiences that help you grow.</p><div className="mt-8 flex flex-wrap gap-3"><Link href="/auth/register" className="inline-flex min-h-12 items-center gap-2 rounded-full bg-[#E86F51] px-6 text-sm font-semibold text-white transition hover:bg-[#cf5e43] active:scale-[0.98]">Join Connect<ArrowRight className="h-4 w-4"/></Link><Link href="#how-it-works" className="inline-flex min-h-12 items-center gap-2 rounded-full px-5 text-sm font-semibold text-[#174D3A] transition hover:bg-white">See how it works<ArrowDownRight className="h-4 w-4"/></Link></div><div className="mt-9 flex items-center gap-2 text-sm text-[#69736D]"><Compass className="h-4 w-4 text-[#287A5B]"/>Built around real people and real opportunities</div></div>
-        <div aria-hidden="true" className="relative mx-auto h-[330px] w-full max-w-[510px] sm:h-[400px]">
-          <svg viewBox="0 0 500 400" className="absolute inset-0 h-full w-full text-emerald-300"><path d="M112 202 C170 80 300 60 380 158 C436 226 354 324 258 294 C184 272 174 167 245 132 C302 104 362 152 350 204" fill="none" stroke="currentColor" strokeWidth="1.4" strokeDasharray="4 7"/><path d="M112 202L245 132M112 202L258 294M245 132L380 158M258 294L350 204" fill="none" stroke="currentColor" strokeWidth="1.2"/></svg>
-          <div className="absolute left-[11%] top-[43%] grid h-24 w-24 place-items-center rounded-[2rem] bg-[#174D3A] text-white shadow-[0_12px_26px_rgba(24,32,28,.12)] sm:h-28 sm:w-28"><UsersRound className="h-10 w-10"/><span className="sr-only">Meet people</span></div>
-          <div className="absolute left-[42%] top-[13%] grid h-20 w-20 place-items-center rounded-[1.7rem] bg-[#FCE9E3] text-[#A94431] shadow-lg sm:h-24 sm:w-24"><Hammer className="h-9 w-9"/><span className="sr-only">Build together</span></div>
-          <div className="absolute right-[6%] top-[34%] grid h-20 w-20 place-items-center rounded-[1.7rem] bg-[#E4EEE8] text-[#174D3A] shadow-[0_10px_22px_rgba(24,32,28,.08)] sm:h-24 sm:w-24"><Building2 className="h-9 w-9"/><span className="sr-only">Explore work</span></div>
-          <div className="absolute left-[45%] bottom-[8%] grid h-[4.5rem] w-[4.5rem] place-items-center rounded-[1.5rem] bg-white text-[#174D3A] ring-1 ring-[#E4E7E2] shadow-[0_10px_22px_rgba(24,32,28,.08)]"><Sparkles className="h-7 w-7"/></div>
-          <span className="absolute left-[5%] top-[22%] h-3 w-3 rounded-full bg-[#287A5B]"/><span className="absolute right-[20%] top-[11%] h-2 w-2 rounded-full bg-[#E86F51]"/><span className="absolute right-[3%] bottom-[20%] h-3 w-3 rounded-full bg-[#287A5B]"/>
-          <div className="absolute left-[32%] top-[49%] rounded-full bg-white/95 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm ring-1 ring-slate-100">Ideas connect here</div>
+  return (
+    <main className="min-h-screen bg-[#F7F6F1] text-[#18201C]">
+      <Navbar />
+
+      {/* ─── HERO ─── */}
+      <section className="relative overflow-hidden bg-[#F7F6F1] px-5 pb-10 pt-8 sm:px-8 sm:pb-16 sm:pt-12 lg:px-10 lg:pt-14">
+        <div className="relative mx-auto max-w-7xl">
+          {/* Mobile / single-column layout first */}
+          <div className="lg:grid lg:grid-cols-[1fr_0.95fr] lg:items-center lg:gap-14">
+            {/* LEFT: text */}
+            <div className="max-w-xl">
+              <h1 className="font-serif font-normal text-[clamp(2.75rem,6.5vw,3.25rem)] leading-[1.02] tracking-[-0.02em] text-[#18201C]">
+                Meet.<br />Build.<br /><span className="text-[#174D3A]">Experience.</span>
+              </h1>
+              <p className="mt-5 max-w-md text-[15px] leading-[1.65] text-[#69736D] font-sans sm:text-base">
+                Connect is where students find people, collaborate on real projects and access experiences that help them grow.
+              </p>
+              <div className="mt-7 flex flex-wrap items-center gap-3">
+                <Link
+                  href="/auth/register"
+                  className="inline-flex min-h-[48px] items-center gap-2 rounded-full bg-[#E86F51] px-7 text-[14px] font-semibold text-white transition hover:bg-[#cf5e43] active:scale-[0.98] font-sans"
+                >
+                  Join Connect <ArrowRight className="h-4 w-4" />
+                </Link>
+                <Link
+                  href="#how-it-works"
+                  className="inline-flex min-h-[48px] items-center gap-1.5 rounded-full px-4 text-[14px] font-medium text-[#174D3A] transition hover:bg-white font-sans"
+                >
+                  See how it works
+                </Link>
+              </div>
+            </div>
+
+            {/* RIGHT: organic visual composition */}
+            <div aria-hidden="true" className="relative mx-auto mt-10 h-[340px] w-full max-w-[500px] sm:h-[400px] lg:mt-0">
+              {/* Connection curves — thin Forest lines */}
+              <svg viewBox="0 0 500 400" className="absolute inset-0 h-full w-full" fill="none">
+                <path d="M112 202 C170 80 300 60 380 158 C436 226 354 324 258 294 C184 272 174 167 245 132 C302 104 362 152 350 204" stroke="#174D3A" strokeWidth="1.2" strokeDasharray="4 7" opacity="0.5" />
+                <path d="M112 202L245 132M258 294L350 204" stroke="#174D3A" strokeWidth="1" opacity="0.3" />
+              </svg>
+
+              {/* Sage abstract forms */}
+              <div className="absolute left-[5%] top-[15%] h-28 w-28 rounded-full bg-[#E4EEE8] opacity-60" />
+              <div className="absolute right-[10%] bottom-[10%] h-20 w-20 rounded-[2rem] bg-[#E4EEE8] opacity-50 rotate-12" />
+
+              {/* Image blobs with organic masks */}
+              <div className="absolute left-[8%] top-[30%] h-28 w-28 overflow-hidden rounded-[2rem] shadow-[0_12px_26px_rgba(24,32,28,.12)] sm:h-32 sm:w-32">
+                <div className="h-full w-full bg-[#174D3A] flex items-center justify-center text-white">
+                  <UsersRound className="h-12 w-12" />
+                </div>
+              </div>
+              <div className="absolute left-[42%] top-[8%] h-24 w-24 overflow-hidden rounded-[1.8rem] shadow-lg sm:h-28 sm:w-28">
+                <div className="h-full w-full bg-[#FCE9E3] flex items-center justify-center text-[#A94431]">
+                  <Hammer className="h-10 w-10" />
+                </div>
+              </div>
+              <div className="absolute right-[4%] top-[28%] h-24 w-24 overflow-hidden rounded-[1.8rem] shadow-[0_10px_22px_rgba(24,32,28,.08)] sm:h-28 sm:w-28">
+                <div className="h-full w-full bg-[#E4EEE8] flex items-center justify-center text-[#174D3A]">
+                  <Building2 className="h-10 w-10" />
+                </div>
+              </div>
+              <div className="absolute left-[44%] bottom-[8%] h-[4.5rem] w-[4.5rem] overflow-hidden rounded-[1.5rem] bg-white ring-1 ring-[#E4E7E2] shadow-[0_10px_22px_rgba(24,32,28,.08)] flex items-center justify-center text-[#174D3A]">
+                <Sparkles className="h-7 w-7" />
+              </div>
+
+              {/* Small Coral and Forest nodes */}
+              <span className="absolute left-[5%] top-[20%] h-3 w-3 rounded-full bg-[#287A5B]" />
+              <span className="absolute right-[18%] top-[10%] h-2.5 w-2.5 rounded-full bg-[#E86F51]" />
+              <span className="absolute right-[3%] bottom-[18%] h-3 w-3 rounded-full bg-[#287A5B]" />
+
+              <div className="absolute left-[30%] top-[52%] rounded-full bg-white/95 px-3 py-1.5 text-[11px] font-medium text-[#18201C] shadow-sm ring-1 ring-[#E4E7E2] font-sans">Ideas connect here</div>
+            </div>
+          </div>
         </div>
-      </div>
-    </section>
-    <section id="pillars" className="mx-auto max-w-7xl px-5 py-16 sm:px-8 sm:py-20 lg:px-10"><div className="mb-9 max-w-2xl"><p className="text-sm font-medium text-emerald-800">A place to move forward</p><h2 className="font-serif font-normal text-[30px] sm:text-[34px] leading-tight text-slate-950 mt-2">Meet. Build. Experience.</h2><p className="mt-3 text-base leading-7 text-slate-600 font-sans">Different ways to find your people and get involved in work that matters to you.</p></div><div className="grid gap-x-10 md:grid-cols-3">{pillars.map(({ name, title, body, href, icon: Icon, tone }) => <article key={name} className="border-t border-slate-200 py-6"><div className={`grid h-11 w-11 place-items-center rounded-xl ${tone}`}><Icon className="h-5 w-5"/></div><p className="mt-5 text-sm font-medium text-slate-500">{name}</p><h3 className="mt-1 font-sans font-semibold text-[17px] leading-snug text-slate-900">{title}</h3><p className="mt-3 text-sm leading-6 text-slate-600 font-sans">{body}</p><Link href={href} className="mt-5 inline-flex min-h-10 items-center gap-2 text-sm font-semibold text-emerald-800 hover:text-emerald-950">Explore {name}<ArrowRight className="h-4 w-4"/></Link></article>)}</div></section>
-    <section id="how-it-works" className="border-y border-emerald-100 bg-emerald-50/60"><div className="mx-auto grid max-w-7xl gap-8 px-5 py-14 sm:px-8 md:grid-cols-[0.8fr_1.2fr] md:items-center md:py-16 lg:px-10"><div><p className="text-sm font-medium text-emerald-800">How Connect works</p><h2 className="font-serif font-normal text-[30px] sm:text-[34px] leading-tight text-slate-950 mt-2">A profile that grows with you.</h2></div><p className="max-w-2xl text-base leading-7 text-slate-700 font-sans">Take part in meetups, collaborate on projects and join real-world experiences. Your Aptivo profile brings your skills, work and verified participation together as you go.</p></div></section>
-    <section className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-6 px-5 py-14 sm:px-8 md:flex-row md:items-center md:py-16 lg:px-10"><div><h2 className="font-serif font-normal text-[26px] sm:text-[30px] leading-tight text-slate-950">Your next step starts with a connection.</h2><p className="mt-2 text-sm text-slate-600 font-sans">Create your profile and find a way in.</p></div><Link href="/auth/register" className="inline-flex min-h-12 items-center gap-2 rounded-full bg-emerald-800 px-6 text-sm font-semibold text-white transition hover:bg-emerald-900">Get started<ArrowRight className="h-4 w-4"/></Link></section>
-    <Footer/>
-  </main>;
+      </section>
+
+      {/* ─── BOTTOM CONCEPTUAL PROGRESSION ─── */}
+      <section className="border-t border-[#E4E7E2] bg-[#F7F6F1]">
+        <div className="mx-auto grid max-w-7xl grid-cols-2 gap-y-6 gap-x-4 px-5 py-12 sm:grid-cols-4 sm:px-8 lg:px-10">
+          {pillars.map(({ name, label, icon: Icon, desc }) => (
+            <div key={name} className="text-center">
+              <div className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-2xl bg-[#E4EEE8] text-[#174D3A]">
+                <Icon className="h-5 w-5" strokeWidth={1.8} />
+              </div>
+              <p className="text-[13px] font-semibold text-[#18201C] font-sans">{name}</p>
+              <p className="text-[12px] text-[#69736D] font-sans">{label}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ─── HOW IT WORKS ─── */}
+      <section id="how-it-works" className="border-t border-[#E4E7E2] bg-[#E4EEE8]/40">
+        <div className="mx-auto grid max-w-7xl gap-6 px-5 py-12 sm:px-8 md:grid-cols-[0.8fr_1.2fr] md:items-center md:py-16 lg:px-10">
+          <div>
+            <p className="text-[12px] font-semibold uppercase tracking-wider text-[#287A5B] font-sans">How Connect works</p>
+            <h2 className="font-serif font-normal text-[clamp(1.75rem,4vw,2.125rem)] leading-tight text-[#18201C] mt-2">A profile that grows with you.</h2>
+          </div>
+          <p className="max-w-2xl text-[15px] leading-[1.65] text-[#69736D] font-sans">
+            Take part in meetups, collaborate on projects and join real-world experiences. Your Aptivo profile brings your skills, work and verified participation together as you go.
+          </p>
+        </div>
+      </section>
+
+      {/* ─── CTA ─── */}
+      <section className="border-t border-[#E4E7E2]">
+        <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-5 px-5 py-12 sm:px-8 md:flex-row md:items-center md:py-16 lg:px-10">
+          <div>
+            <h2 className="font-serif font-normal text-[clamp(1.5rem,3.5vw,1.875rem)] leading-tight text-[#18201C]">Your next step starts with a connection.</h2>
+            <p className="mt-2 text-[13px] text-[#69736D] font-sans">Create your profile and find a way in.</p>
+          </div>
+          <Link href="/auth/register" className="inline-flex min-h-[48px] items-center gap-2 rounded-full bg-[#174D3A] px-7 text-[14px] font-semibold text-white transition hover:bg-[#287A5B] font-sans">
+            Get started <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+      </section>
+
+      <Footer />
+    </main>
+  );
 }

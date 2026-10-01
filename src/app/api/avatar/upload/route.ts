@@ -32,22 +32,28 @@ export async function POST(req: Request) {
       );
     }
 
+    const uploadType = (formData.get('type') as string | null) || 'avatar';
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
-    const filename = `avatar-${user._id}-${Date.now()}.${file.type.split('/')[1] || 'jpg'}`;
+    const filename = `${uploadType === 'cover' ? 'cover' : 'avatar'}-${user._id}-${Date.now()}.${file.type.split('/')[1] || 'jpg'}`;
 
     const fileId = await uploadToGridFS(buffer, filename, file.type, 'avatars');
-    const avatarUrl = `/api/avatar/${fileId}`;
+    const mediaUrl = `/api/avatar/${fileId}`;
 
-    // Update user profile in MongoDB
-    user.profilePhoto = avatarUrl;
-    user.avatarUrl = avatarUrl;
+    // Update user profile in MongoDB for the authenticated user
+    if (uploadType === 'cover') {
+      user.coverImage = mediaUrl;
+    } else {
+      user.profilePhoto = mediaUrl;
+      user.avatarUrl = mediaUrl;
+    }
     await user.save();
 
     return NextResponse.json({
       success: true,
-      message: 'Avatar uploaded successfully!',
-      avatarUrl,
+      message: uploadType === 'cover' ? 'Cover uploaded successfully!' : 'Avatar uploaded successfully!',
+      avatarUrl: mediaUrl,
+      coverUrl: mediaUrl,
       fileId,
     });
   } catch (error: unknown) {

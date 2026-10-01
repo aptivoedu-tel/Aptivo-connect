@@ -41,9 +41,14 @@ export async function POST(req: Request) {
     if (!recipient) return NextResponse.json({ error: 'Recipient could not be resolved.' }, { status: 400 });
     const message = await Message.create({ conversationId: conversation._id, senderId: actor._id, recipientId: recipient, content: content.trim(), isRead: false });
     await Conversation.findByIdAndUpdate(conversation._id, { $set: { lastMessage: content.trim().slice(0, 100), lastMessageAt: new Date(), lastSenderId: actor._id } });
-    await publishConversationMessage(String(conversation._id), message.toObject());
+    const plainMessage = JSON.parse(JSON.stringify(message.toObject()));
+    await publishConversationMessage(String(conversation._id), plainMessage);
+    try {
+      const { publishUserEvent } = await import('@/lib/realtime');
+      await publishUserEvent(recipient, 'message.created', plainMessage);
+    } catch {}
     await NotificationEngine.dispatch({ userId: recipient, eventType: 'EVENT_REMINDER', title: `Message from ${actor.fullName || actor.name || 'Aptivo member'}`, message: content.trim().slice(0, 60), link: `/dashboard/messages?conv=${conversation._id}`, type: 'system' });
-    return NextResponse.json({ success: true, message, conversationId: conversation._id }, { status: 201 });
+    return NextResponse.json({ success: true, message: plainMessage, conversationId: conversation._id }, { status: 201 });
   } catch (error) {
     const auth = authError(error); return NextResponse.json(auth || { error: (error as Error).message }, { status: auth?.status || 500 });
   }

@@ -43,6 +43,12 @@ export async function PATCH(
         type: 'link',
       });
 
+      try {
+        const { publishUserEvent } = await import('@/lib/realtime');
+        await publishUserEvent(link.requester, 'connection.request.accepted', { link: link.toObject(), accepterId: actor._id });
+        await publishUserEvent(actor._id, 'connection.request.accepted', { link: link.toObject(), accepterId: actor._id });
+      } catch {}
+
       return NextResponse.json({
         success: true,
         message: 'Link request accepted!',
@@ -55,6 +61,12 @@ export async function PATCH(
       link.status = 'declined';
       await link.save();
 
+      try {
+        const { publishUserEvent } = await import('@/lib/realtime');
+        await publishUserEvent(link.requester, 'connection.request.declined', { link: link.toObject(), declinerId: actor._id });
+        await publishUserEvent(actor._id, 'connection.request.declined', { link: link.toObject(), declinerId: actor._id });
+      } catch {}
+
       return NextResponse.json({
         success: true,
         message: 'Link request declined.',
@@ -66,6 +78,12 @@ export async function PATCH(
       if (link.requester.toString() !== actor._id.toString() || link.status !== 'pending') return NextResponse.json({ error: 'Only the requester can cancel this request.' }, { status: 403 });
       link.status = 'canceled';
       await link.save();
+
+      try {
+        const { publishUserEvent } = await import('@/lib/realtime');
+        await publishUserEvent(link.recipient, 'connection.request.canceled', { link: link.toObject(), cancellerId: actor._id });
+        await publishUserEvent(actor._id, 'connection.request.canceled', { link: link.toObject(), cancellerId: actor._id });
+      } catch {}
 
       return NextResponse.json({
         success: true,

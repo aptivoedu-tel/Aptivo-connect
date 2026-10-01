@@ -78,6 +78,12 @@ export default function LinksPage() {
     } else {
       setLoading(false);
     }
+
+    const handleRealtime = () => {
+      if (email) loadLinks(email);
+    };
+    window.addEventListener('aptivo:realtime-event', handleRealtime);
+    return () => window.removeEventListener('aptivo:realtime-event', handleRealtime);
   }, []);
 
   const loadLinks = async (email: string) => {

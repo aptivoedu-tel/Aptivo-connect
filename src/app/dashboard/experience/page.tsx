@@ -11,9 +11,9 @@ import {
   Building,
   Info,
   Search,
+  X,
 } from 'lucide-react';
 import MediaImage from '@/components/MediaImage';
-import StatusPill from '@/components/StatusPill';
 
 interface IEnrolled {
   studentName: string;
@@ -124,15 +124,27 @@ export default function ExperiencePage() {
   );
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
+    <div className="mx-auto max-w-7xl space-y-6 animate-in fade-in duration-200 font-sans">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-sm font-medium text-emerald-800 font-sans">Experience</p>
-          <h2 className="font-serif font-normal text-[30px] sm:text-[34px] leading-tight text-slate-950 mt-1">Step into the work.</h2>
-          <p className="mt-2 text-sm text-slate-500 font-sans">Visit the places where ideas become real.</p>
+          <p className="text-[13px] font-semibold text-[#174D3A]">Experience</p>
+          <h1 className="font-serif font-normal text-[30px] sm:text-[34px] leading-tight text-[#18201C] mt-1">
+            Step into the work.
+          </h1>
+          <p className="mt-1.5 text-[14px] text-[#69736D]">
+            Visit the places where ideas become real.
+          </p>
         </div>
-        <label className="flex h-11 w-full max-w-sm items-center gap-2 rounded-full bg-white px-4 text-slate-400 ring-1 ring-slate-200 focus-within:ring-2 focus-within:ring-emerald-600"><Search className="h-4 w-4 shrink-0"/><input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search experiences" className="w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400 font-sans"/></label>
+        <label className="flex h-11 w-full max-w-sm items-center gap-2 rounded-full bg-white px-4 text-[#69736D] border border-[#E4E7E2] focus-within:ring-2 focus-within:ring-[#174D3A]/20">
+          <Search className="h-4 w-4 shrink-0 text-[#69736D]" />
+          <input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search experiences..."
+            className="w-full bg-transparent text-[13px] text-[#18201C] outline-none placeholder:text-[#69736D]"
+          />
+        </label>
       </div>
 
       {/* Category Pills */}
@@ -141,10 +153,10 @@ export default function ExperiencePage() {
           <button
             key={cat}
             onClick={() => setSelectedCategory(cat)}
-            className={`px-4 py-1.5 rounded-full font-sans text-xs font-semibold transition-all ${
+            className={`px-4 py-1.5 rounded-full text-[13px] font-semibold transition-all ${
               selectedCategory === cat
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                ? 'bg-[#174D3A] text-white shadow-sm'
+                : 'bg-white border border-[#E4E7E2] text-[#69736D] hover:bg-[#F7F6F1]'
             }`}
           >
             {cat}
@@ -154,63 +166,64 @@ export default function ExperiencePage() {
 
       {/* Experience Cards */}
       {loading ? (
-        <div className="py-12 text-center text-slate-400 font-sans text-sm">Loading experiences...</div>
+        <div className="py-12 text-center text-[#69736D] text-[14px]">Loading experiences...</div>
       ) : filtered.length === 0 ? (
-        <div className="p-12 bg-slate-50 rounded-3xl border border-dashed border-slate-300 text-center space-y-3">
-          <Building className="w-8 h-8 text-slate-400 mx-auto" />
-          <h3 className="font-serif font-normal text-[18px] text-slate-800">No Experiences Available</h3>
-          <p className="text-xs text-slate-500 max-w-md mx-auto font-sans">
+        <div className="p-12 bg-white rounded-[16px] border border-dashed border-[#E4E7E2] text-center space-y-3">
+          <Building className="w-8 h-8 text-[#69736D] mx-auto" />
+          <h3 className="font-serif font-normal text-[18px] text-[#18201C]">No Experiences Available</h3>
+          <p className="text-[13px] text-[#69736D] max-w-md mx-auto">
             Check back soon as Aptivo curates more industrial visits and laboratory walkthroughs.
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {filtered.map((exp) => {
             const seatsRemaining = exp.capacity - (exp.enrolledCount || 0);
             return (
               <div
                 key={exp._id}
-                className="bg-white overflow-hidden rounded-2xl border border-slate-200 hover:border-blue-300 hover:shadow-lg transition-all flex flex-col justify-between group"
+                className="bg-white overflow-hidden rounded-[16px] border border-[#E4E7E2] transition-all flex flex-col justify-between group shadow-sm"
               >
                 <div className="space-y-4">
-                  <MediaImage src={exp.image} alt={exp.title} kind="experience" className="h-40" />
-                  <div className="px-5 space-y-4">
-                    <span className="absolute top-3 left-3 px-3 py-1 rounded-full bg-slate-900/80 backdrop-blur-md text-white font-sans text-[10px] font-semibold">
+                  <div className="relative">
+                    <MediaImage src={exp.image} alt={exp.title} kind="experience" className="h-44" />
+                    <span className="absolute top-3 left-3 px-3 py-1 rounded-full bg-white/95 backdrop-blur-sm text-[#174D3A] text-[11px] font-medium">
                       {exp.category}
                     </span>
-                  <div>
-                    <span className="font-sans text-xs font-semibold text-brand-700 uppercase tracking-wide">
+                  </div>
+                  <div className="px-5 space-y-2">
+                    <span className="text-[11px] font-semibold text-[#174D3A] uppercase tracking-wide">
                       {exp.company}
                     </span>
-                    <h4 className="font-sans font-semibold text-[15px] md:text-[17px] leading-[1.25] text-slate-900 mt-1">
+                    <h3 className="font-semibold text-[16px] leading-snug text-[#18201C]">
                       {exp.title}
-                    </h4>
-                    <p className="font-sans text-xs text-slate-600 mt-2 line-clamp-1">{exp.description}</p>
-                  </div></div>
+                    </h3>
+                    <p className="text-[13px] text-[#69736D] line-clamp-2">{exp.description}</p>
+                  </div>
 
                   {/* Info Badges */}
-                  <div className="space-y-2 text-xs text-slate-500 bg-white p-3.5 rounded-2xl border border-slate-100">
+                  <div className="mx-5 space-y-1.5 text-[12px] text-[#69736D] bg-[#F7F6F1] p-3.5 rounded-[12px]">
                     <div className="flex items-center gap-2">
-                      <Calendar className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                      <Calendar className="w-3.5 h-3.5 text-[#174D3A] shrink-0" />
                       <span>{exp.date} • {exp.time}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                      <MapPin className="w-3.5 h-3.5 text-[#174D3A] shrink-0" />
                       <span className="truncate">{exp.location}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-emerald-700 font-medium">
-                      <Users className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <div className="flex items-center gap-2 text-[#174D3A] font-medium">
+                      <Users className="w-3.5 h-3.5 shrink-0" />
                       <span>{seatsRemaining} seats remaining of {exp.capacity}</span>
                     </div>
                   </div>
                 </div>
 
-                <div className="mx-5 pt-4 mt-4 border-t border-slate-200/60">
+                <div className="p-5 pt-3">
                   <button
                     onClick={() => setActiveExp(exp)}
-                    className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-brand-600 text-white text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1.5"
+                    className="w-full py-2.5 rounded-full bg-[#174D3A] hover:bg-[#287A5B] text-white text-[13px] font-semibold transition-all shadow-sm"
                   >
-                    <span>View & Register</span>
+                    View & Register
                   </button>
                 </div>
               </div>
@@ -221,47 +234,45 @@ export default function ExperiencePage() {
 
       {/* Enroll Modal */}
       {activeExp && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
             {enrolledSuccess ? (
               <div className="py-12 text-center space-y-3">
-                <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mx-auto">
-                  <CheckCircle2 className="w-7 h-7" />
-                </div>
-                <h3 className="font-extrabold text-slate-900 text-lg">You’re registered ✓</h3>
-                <p className="text-xs text-slate-500 max-w-xs mx-auto">
-                  Your place for {activeExp.title} is confirmed. Aptivo will notify you about any changes.
+                <CheckCircle2 className="w-12 h-12 text-[#174D3A] mx-auto" />
+                <h3 className="font-serif font-normal text-[24px] text-[#18201C]">You’re registered ✓</h3>
+                <p className="text-[13px] text-[#69736D] max-w-xs mx-auto">
+                  Your place for {activeExp.title} is confirmed. Aptivo will notify you about any updates.
                 </p>
               </div>
             ) : (
               <>
-                <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-100">
+                <div className="flex items-center justify-between pb-3 mb-4 border-b border-[#E4E7E2]">
                   <div>
-                    <h3 className="text-lg font-bold text-slate-900">
+                    <h3 className="text-[18px] font-serif font-normal text-[#18201C]">
                       Register: {activeExp.title}
                     </h3>
-                    <p className="text-xs text-slate-500 mt-0.5">
+                    <p className="text-[12px] text-[#69736D]">
                       Hosted at {activeExp.company} ({activeExp.city})
                     </p>
                   </div>
                   <button
                     onClick={() => setActiveExp(null)}
-                    className="text-slate-400 hover:text-slate-600 text-xl font-bold"
+                    className="text-[#69736D] hover:text-[#18201C]"
                   >
-                    &times;
+                    <X className="w-5 h-5" />
                   </button>
                 </div>
 
                 <form onSubmit={handleEnroll} className="space-y-4">
-                  <div className="p-3.5 bg-blue-50/70 border border-blue-100 rounded-2xl text-xs text-blue-900 space-y-1">
+                  <div className="p-3.5 bg-[#E4EEE8] rounded-[12px] text-[12px] text-[#174D3A] space-y-1">
                     <p className="font-semibold flex items-center gap-1">
                       <Info className="w-3.5 h-3.5" /> Eligibility Requirement:
                     </p>
-                    <p className="text-blue-800">{activeExp.eligibility}</p>
+                    <p>{activeExp.eligibility}</p>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                    <label className="block text-[12px] font-semibold text-[#18201C] mb-1">
                       Why do you want to attend this workplace experience? *
                     </label>
                     <textarea
@@ -270,29 +281,29 @@ export default function ExperiencePage() {
                       value={whyAttend}
                       onChange={(e) => setWhyAttend(e.target.value)}
                       placeholder="Tell us what you hope to learn and how this aligns with your career interests."
-                      className="w-full p-3 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-brand-500/20 focus:outline-none"
+                      className="w-full p-3 rounded-[12px] border border-[#E4E7E2] text-[13px] focus:ring-2 focus:ring-[#174D3A]/20 focus:outline-none"
                     />
                   </div>
 
                   {(activeExp.questionnaire || []).map((question) => (
                     <div key={question.id}>
-                      <label className="block text-xs font-bold text-slate-700 mb-1">{question.questionText} {question.required ? '*' : ''}</label>
-                      {question.questionType === 'long-text' ? <textarea required={question.required} rows={3} value={questionAnswers[question.id] || ''} onChange={(e) => setQuestionAnswers((a) => ({ ...a, [question.id]: e.target.value }))} className="w-full p-3 rounded-xl border border-slate-200 text-sm" /> : question.questionType === 'single-choice' ? <select required={question.required} value={questionAnswers[question.id] || ''} onChange={(e) => setQuestionAnswers((a) => ({ ...a, [question.id]: e.target.value }))} className="w-full min-h-11 p-3 rounded-xl border border-slate-200 text-sm"><option value="">Select an option</option>{(question.options || []).map((option) => <option key={option} value={option}>{option}</option>)}</select> : <input required={question.required} value={questionAnswers[question.id] || ''} onChange={(e) => setQuestionAnswers((a) => ({ ...a, [question.id]: e.target.value }))} className="w-full min-h-11 p-3 rounded-xl border border-slate-200 text-sm" />}
+                      <label className="block text-[12px] font-semibold text-[#18201C] mb-1">{question.questionText} {question.required ? '*' : ''}</label>
+                      {question.questionType === 'long-text' ? <textarea required={question.required} rows={3} value={questionAnswers[question.id] || ''} onChange={(e) => setQuestionAnswers((a) => ({ ...a, [question.id]: e.target.value }))} className="w-full p-3 rounded-[12px] border border-[#E4E7E2] text-[13px]" /> : question.questionType === 'single-choice' ? <select required={question.required} value={questionAnswers[question.id] || ''} onChange={(e) => setQuestionAnswers((a) => ({ ...a, [question.id]: e.target.value }))} className="w-full p-3 rounded-[12px] border border-[#E4E7E2] text-[13px]"><option value="">Select an option</option>{(question.options || []).map((option) => <option key={option} value={option}>{option}</option>)}</select> : <input required={question.required} value={questionAnswers[question.id] || ''} onChange={(e) => setQuestionAnswers((a) => ({ ...a, [question.id]: e.target.value }))} className="w-full p-3 rounded-[12px] border border-[#E4E7E2] text-[13px]" />}
                     </div>
                   ))}
 
-                  <div className="pt-4 flex justify-end gap-3">
+                  <div className="pt-3 flex justify-end gap-2">
                     <button
                       type="button"
                       onClick={() => setActiveExp(null)}
-                      className="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-semibold hover:bg-slate-50"
+                      className="px-5 py-2 rounded-full border border-[#E4E7E2] text-[#69736D] text-[13px] font-semibold hover:bg-[#F7F6F1]"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
                       disabled={enrolling}
-                      className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold shadow-md transition-all disabled:opacity-50"
+                      className="inline-flex items-center gap-1.5 px-6 py-2 rounded-full bg-[#174D3A] hover:bg-[#287A5B] text-white text-[13px] font-semibold shadow-sm transition-all disabled:opacity-50"
                     >
                       <Send className="w-4 h-4" />
                       <span>{enrolling ? 'Submitting...' : 'Register'}</span>
