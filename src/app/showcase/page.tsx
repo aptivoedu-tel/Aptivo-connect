@@ -77,7 +77,7 @@ export default function ShowcasePage() {
             <Award className="w-3.5 h-3.5 text-brand-600" />
             <span>Built Through Aptivo Connect</span>
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">
+          <h1 className="font-serif font-normal text-[30px] sm:text-[34px] leading-tight text-slate-950">
             Built by Connect teams
           </h1>
           <p className="max-w-2xl text-sm leading-6 text-slate-600">

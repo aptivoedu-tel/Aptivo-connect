@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Manrope:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -6,16 +8,97 @@
   :root {
     --background: 48 21% 95%;
     --foreground: 138 13% 11%;
+    --font-dm-serif: 'DM Serif Display', Georgia, serif;
+    --font-manrope: 'Manrope', system-ui, sans-serif;
   }
 
   body {
-    @apply bg-[#F7F6F1] text-[#18201C] antialiased selection:bg-[#287A5B] selection:text-white;
+    @apply bg-[#F7F6F1] text-[#18201C] font-sans antialiased selection:bg-[#287A5B] selection:text-white;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 
   input, select, textarea {
     font-size: max(16px, 1em);
   }
+}
+
+/* Aptivo Typography System Rules */
+.font-display, .font-serif {
+  font-family: var(--font-dm-serif), 'DM Serif Display', Georgia, serif;
+  font-weight: 400;
+}
+
+.font-sans, .font-body {
+  font-family: var(--font-manrope), 'Manrope', system-ui, sans-serif;
+}
+
+.aptivo-display {
+  font-family: var(--font-dm-serif), 'DM Serif Display', Georgia, serif;
+  font-weight: 400;
+  letter-spacing: -0.015em;
+}
+
+/* Standard Typography Scales & Roles */
+.text-landing-hero {
+  font-family: var(--font-dm-serif), Georgia, serif;
+  font-weight: 400;
+  font-size: clamp(2.875rem, 6vw, 3.25rem); /* 46px - 52px */
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+}
+
+.text-home-greeting, .text-page-title {
+  font-family: var(--font-dm-serif), Georgia, serif;
+  font-weight: 400;
+  font-size: clamp(1.875rem, 4vw, 2.125rem); /* 30px - 34px */
+  line-height: 1.08;
+}
+
+.text-profile-name {
+  font-family: var(--font-dm-serif), Georgia, serif;
+  font-weight: 400;
+  font-size: clamp(1.625rem, 3.5vw, 1.875rem); /* 26px - 30px */
+  line-height: 1.1;
+}
+
+.text-section-heading {
+  font-family: var(--font-dm-serif), Georgia, serif;
+  font-weight: 400;
+  font-size: clamp(1.125rem, 2.5vw, 1.3125rem); /* 18px - 21px */
+  line-height: 1.15;
+}
+
+.text-card-title {
+  font-family: var(--font-manrope), system-ui, sans-serif;
+  font-weight: 600;
+  font-size: clamp(0.9375rem, 2vw, 1.0625rem); /* 15px - 17px */
+  line-height: 1.25;
+}
+
+.text-body-text {
+  font-family: var(--font-manrope), system-ui, sans-serif;
+  font-weight: 400;
+  font-size: clamp(0.875rem, 1.8vw, 1rem); /* 14px - 16px */
+  line-height: 1.5;
+}
+
+.text-metadata-text {
+  font-family: var(--font-manrope), system-ui, sans-serif;
+  font-weight: 400;
+  font-size: clamp(0.75rem, 1.5vw, 0.8125rem); /* 12px - 13px */
+  line-height: 1.35;
+}
+
+.text-btn-text {
+  font-family: var(--font-manrope), system-ui, sans-serif;
+  font-weight: 600;
+  font-size: clamp(0.8125rem, 1.6vw, 0.9375rem); /* 13px - 15px */
+}
+
+.text-nav-text {
+  font-family: var(--font-manrope), system-ui, sans-serif;
+  font-weight: 500;
+  font-size: clamp(0.6875rem, 1.4vw, 0.8125rem); /* 11px - 13px */
 }
 
 .safe-top {
@@ -42,7 +125,7 @@
   background: #8f9b92;
 }
 
-/* Compatibility utilities for legacy surfaces. New UI should use the tokens above. */
+/* Compatibility utilities for legacy surfaces. */
 .glass-panel {
   background: #fff;
   border: 1px solid #e4e7e2;
@@ -56,8 +139,8 @@
 .gradient-text { color: #174D3A; }
 .gradient-badge { background: #E4EEE8; color: #174D3A; }
 
-.aptivo-display { font-family: Georgia, 'Times New Roman', serif; letter-spacing: -.045em; }
 .aptivo-surface { border: 1px solid #E4E7E2; background: #fff; box-shadow: 0 1px 2px rgba(24,32,28,.035); }
-.aptivo-chip { border-radius: 9999px; background: #E4EEE8; color: #174D3A; }
-.aptivo-input { border: 1px solid #E4E7E2; background: #fff; color: #18201C; }
+.aptivo-chip { border-radius: 9999px; background: #E4EEE8; color: #174D3A; font-family: var(--font-manrope), sans-serif; }
+.aptivo-input { border: 1px solid #E4E7E2; background: #fff; color: #18201C; font-family: var(--font-manrope), sans-serif; }
 .aptivo-input:focus { border-color: #287A5B; outline: 2px solid rgba(40,122,91,.16); outline-offset: 1px; }
+

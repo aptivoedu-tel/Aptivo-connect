@@ -62,7 +62,7 @@ export default function DashboardShell({ children, user }: { children: React.Rea
         <button onClick={() => setMenuOpen(true)} aria-label="Open navigation menu" className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[#18201C] hover:bg-[#E4EEE8] lg:hidden"><Menu className="h-5 w-5"/></button>
         <Link href="/dashboard" className="flex shrink-0 items-center gap-2.5" aria-label="Aptivo Connect home">
           <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#174D3A] text-white"><Sparkles className="h-4 w-4"/></span>
-          <span className="aptivo-display text-[18px] font-semibold text-[#18201C]">Aptivo <span className="font-normal text-[#287A5B]">Connect</span></span>
+          <span className="font-serif font-normal text-[18px] text-[#18201C]">Aptivo <span className="font-sans font-semibold text-[#287A5B]">Connect</span></span>
         </Link>
         <nav aria-label="Main navigation" className="ml-6 hidden h-full items-center gap-1 lg:flex">
           {primary.map(({ name, href }) => <Link key={href} href={href} aria-current={active(href) ? 'page' : undefined} className={clsx('relative inline-flex h-full items-center px-3 text-[13px] font-medium transition-colors', active(href) ? 'text-emerald-900' : 'text-slate-600 hover:text-slate-950')}>

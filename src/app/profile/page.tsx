@@ -525,7 +525,7 @@ export default function ProfilePage() {
               </span>
             )}
           </div>
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+          <h2 className="font-serif font-normal text-[26px] sm:text-[30px] leading-tight text-slate-900">
             {fullName || 'Builder Profile'}
           </h2>
           <p className="text-xs text-slate-500 mt-1">

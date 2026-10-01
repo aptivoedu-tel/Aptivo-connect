@@ -239,16 +239,16 @@ export default function BuildPage() {
       {/* Header */}
       <div className="flex flex-col justify-between gap-4 border-b border-[#E4E7E2] pb-6 sm:flex-row sm:items-center">
         <div>
-          <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-[#E4EEE8] px-3 py-1 text-xs font-bold text-[#174D3A]">
+          <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-[#E4EEE8] px-3 py-1 font-sans text-xs font-semibold text-[#174D3A]">
             <Hammer className="w-3.5 h-3.5" />
             <span>Pillar 2: BUILD</span>
           </div>
-          <h2 className="aptivo-display text-4xl font-semibold text-[#18201C]">Build with people who care.</h2>
+          <h2 className="font-serif font-normal text-[30px] sm:text-[34px] leading-tight text-[#18201C]">Build with people who care.</h2>
         </div>
 
         <button
           onClick={() => setIsCreateModalOpen(true)}
-          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-[#174D3A] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#287A5B]"
+          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-[#174D3A] px-6 py-3 font-sans text-sm font-semibold text-white transition hover:bg-[#287A5B]"
         >
           <Plus className="w-4 h-4" />
           <span>Propose a Project</span>
@@ -263,7 +263,7 @@ export default function BuildPage() {
             <button
               key={cat}
               onClick={() => setSelectedField(cat)}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all ${
+              className={`px-3.5 py-1.5 rounded-full font-sans text-xs font-semibold transition-all ${
                 selectedField === cat
                   ? 'bg-[#174D3A] text-white'
                   : 'bg-white text-[#69736D] border border-[#E4E7E2] hover:bg-[#E4EEE8]'
@@ -282,19 +282,19 @@ export default function BuildPage() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search projects"
-            className="aptivo-input w-full min-h-11 rounded-xl pl-9 pr-4 text-sm"
+            className="aptivo-input w-full min-h-11 rounded-xl pl-9 pr-4 font-sans text-sm"
           />
         </div>
       </div>
 
       {/* Projects Grid */}
       {loading ? (
-        <div className="py-12 text-center text-slate-400 text-sm">Loading projects...</div>
+        <div className="py-12 text-center text-slate-400 font-sans text-sm">Loading projects...</div>
       ) : filteredProjects.length === 0 ? (
         <div className="space-y-3 rounded-3xl border border-dashed border-[#E4E7E2] bg-white p-12 text-center">
           <Hammer className="mx-auto h-8 w-8 text-[#287A5B]" />
-          <h3 className="text-base font-bold text-[#18201C]">No projects found</h3>
-          <p className="mx-auto max-w-md text-xs text-[#69736D]">
+          <h3 className="font-serif font-normal text-[18px] text-[#18201C]">No projects found</h3>
+          <p className="mx-auto max-w-md font-sans text-xs text-[#69736D]">
             Try adjusting your search query or propose a new project brief using the button above.
           </p>
         </div>
@@ -309,23 +309,23 @@ export default function BuildPage() {
                 <MediaImage src={proj.coverImage} alt={proj.title} kind="build" className="h-40" />
                 <div className="px-5 space-y-4">
                     {proj.isAptivoVerified && (
-                      <span className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-emerald-950/80 backdrop-blur-md text-emerald-300 border border-emerald-500/40 text-[10px] font-bold flex items-center gap-1 shadow-sm">
+                      <span className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-emerald-950/80 backdrop-blur-md text-emerald-300 border border-emerald-500/40 font-sans text-[10px] font-semibold flex items-center gap-1 shadow-sm">
                         <CheckCircle2 className="w-3 h-3 text-emerald-400" />
                         Aptivo Verified
                       </span>
                     )}
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-[#287A5B]">
+                  <span className="font-sans text-[11px] font-semibold uppercase tracking-wider text-[#287A5B]">
                     {proj.field}
                   </span>
                   <StatusPill status={proj.status} size="sm" />
                 </div>
 
                 <div>
-                  <h4 className="text-base font-extrabold leading-snug text-[#18201C]">
+                  <h4 className="font-sans font-semibold text-[15px] md:text-[17px] leading-[1.25] text-[#18201C]">
                     {proj.title}
                   </h4>
-                  <p className="mt-2 line-clamp-1 text-xs text-[#69736D]">{proj.building || proj.problem}</p>
+                  <p className="mt-2 line-clamp-1 font-sans text-xs text-[#69736D]">{proj.building || proj.problem}</p>
                 </div></div>
 
                 {/* Skills Tags */}

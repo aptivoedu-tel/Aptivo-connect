@@ -128,11 +128,11 @@ export default function ExperiencePage() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-sm font-medium text-emerald-800">Experience</p>
-          <h2 className="mt-1 text-2xl font-semibold text-slate-950 tracking-tight sm:text-3xl">Step into the work.</h2>
-          <p className="mt-2 text-sm text-slate-500">Visit the places where ideas become real.</p>
+          <p className="text-sm font-medium text-emerald-800 font-sans">Experience</p>
+          <h2 className="font-serif font-normal text-[30px] sm:text-[34px] leading-tight text-slate-950 mt-1">Step into the work.</h2>
+          <p className="mt-2 text-sm text-slate-500 font-sans">Visit the places where ideas become real.</p>
         </div>
-        <label className="flex h-11 w-full max-w-sm items-center gap-2 rounded-full bg-white px-4 text-slate-400 ring-1 ring-slate-200 focus-within:ring-2 focus-within:ring-emerald-600"><Search className="h-4 w-4 shrink-0"/><input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search experiences" className="w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"/></label>
+        <label className="flex h-11 w-full max-w-sm items-center gap-2 rounded-full bg-white px-4 text-slate-400 ring-1 ring-slate-200 focus-within:ring-2 focus-within:ring-emerald-600"><Search className="h-4 w-4 shrink-0"/><input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search experiences" className="w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400 font-sans"/></label>
       </div>
 
       {/* Category Pills */}
@@ -141,7 +141,7 @@ export default function ExperiencePage() {
           <button
             key={cat}
             onClick={() => setSelectedCategory(cat)}
-            className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${
+            className={`px-4 py-1.5 rounded-full font-sans text-xs font-semibold transition-all ${
               selectedCategory === cat
                 ? 'bg-blue-600 text-white shadow-sm'
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -154,12 +154,12 @@ export default function ExperiencePage() {
 
       {/* Experience Cards */}
       {loading ? (
-        <div className="py-12 text-center text-slate-400 text-sm">Loading experiences...</div>
+        <div className="py-12 text-center text-slate-400 font-sans text-sm">Loading experiences...</div>
       ) : filtered.length === 0 ? (
         <div className="p-12 bg-slate-50 rounded-3xl border border-dashed border-slate-300 text-center space-y-3">
           <Building className="w-8 h-8 text-slate-400 mx-auto" />
-          <h3 className="font-bold text-slate-800 text-base">No Experiences Available</h3>
-          <p className="text-xs text-slate-500 max-w-md mx-auto">
+          <h3 className="font-serif font-normal text-[18px] text-slate-800">No Experiences Available</h3>
+          <p className="text-xs text-slate-500 max-w-md mx-auto font-sans">
             Check back soon as Aptivo curates more industrial visits and laboratory walkthroughs.
           </p>
         </div>
@@ -175,17 +175,17 @@ export default function ExperiencePage() {
                 <div className="space-y-4">
                   <MediaImage src={exp.image} alt={exp.title} kind="experience" className="h-40" />
                   <div className="px-5 space-y-4">
-                    <span className="absolute top-3 left-3 px-3 py-1 rounded-full bg-slate-900/80 backdrop-blur-md text-white text-[10px] font-bold">
+                    <span className="absolute top-3 left-3 px-3 py-1 rounded-full bg-slate-900/80 backdrop-blur-md text-white font-sans text-[10px] font-semibold">
                       {exp.category}
                     </span>
                   <div>
-                    <span className="text-xs font-bold text-brand-700 uppercase tracking-wide">
+                    <span className="font-sans text-xs font-semibold text-brand-700 uppercase tracking-wide">
                       {exp.company}
                     </span>
-                    <h4 className="font-extrabold text-slate-900 text-base mt-1 leading-snug">
+                    <h4 className="font-sans font-semibold text-[15px] md:text-[17px] leading-[1.25] text-slate-900 mt-1">
                       {exp.title}
                     </h4>
-                    <p className="text-xs text-slate-600 mt-2 line-clamp-1">{exp.description}</p>
+                    <p className="font-sans text-xs text-slate-600 mt-2 line-clamp-1">{exp.description}</p>
                   </div></div>
 
                   {/* Info Badges */}

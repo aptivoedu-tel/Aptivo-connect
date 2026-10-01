@@ -119,11 +119,11 @@ export default function RegisterPage() {
           <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-brand-600 to-darkpine-900 flex items-center justify-center text-white shadow-md shadow-brand-500/20">
             <Sparkles className="w-5 h-5 text-brand-200" />
           </div>
-          <span className="font-black text-2xl tracking-tight text-slate-900">
-            Aptivo <span className="text-brand-600">Connect</span>
+          <span className="font-serif font-normal text-2xl tracking-tight text-slate-900">
+            Aptivo <span className="font-sans font-semibold text-brand-600">Connect</span>
           </span>
         </Link>
-        <h2 className="text-2xl font-black text-slate-900 tracking-tight">Create Your Account</h2>
+        <h2 className="font-serif font-normal text-[30px] sm:text-[34px] leading-tight text-slate-900">Create Your Account</h2>
         <p className="text-xs text-slate-500 max-w-sm mx-auto">
           Join the opportunity ecosystem connecting ambitious students with real mentors, project teams, and company visits.
         </p>

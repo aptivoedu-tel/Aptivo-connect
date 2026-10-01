@@ -260,13 +260,13 @@ export default function MessagesPage() {
           {/* Header */}
           <div className="p-4 sm:p-5 border-b border-slate-200/80 space-y-3 bg-white">
             <div className="flex items-center justify-between">
-              <h2 className="font-extrabold text-slate-900 text-lg flex items-center gap-2">
-                <MessageSquare className="w-5 h-5 text-brand-600" />
+              <h2 className="font-serif font-normal text-[30px] sm:text-[34px] leading-tight text-[#18201C] flex items-center gap-2">
+                <MessageSquare className="w-6 h-6 text-brand-600" />
                 <span>Chats</span>
               </h2>
               <Link
                 href="/dashboard/people"
-                className="text-xs font-bold text-brand-600 hover:underline"
+                className="text-xs font-semibold text-brand-600 hover:underline font-sans"
               >
                 + New Chat
               </Link>

@@ -36,10 +36,10 @@ export default function Navbar() {
           </div>
           <div>
             <div className="flex items-center gap-1.5">
-              <span className="font-extrabold text-xl tracking-tight text-slate-900">Aptivo</span>
-              <span className="font-semibold text-xl tracking-tight text-brand-600">Connect</span>
+              <span className="font-serif font-normal text-xl tracking-tight text-slate-900">Aptivo</span>
+              <span className="font-sans font-semibold text-xl tracking-tight text-brand-600">Connect</span>
             </div>
-            <p className="hidden text-[10px] font-medium text-slate-500 sm:block">
+            <p className="hidden text-[11px] font-medium text-slate-500 sm:block font-sans">
               Meet · Build · Experience
             </p>
           </div>

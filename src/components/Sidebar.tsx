@@ -54,10 +54,10 @@ export default function Sidebar() {
           <Sparkles className="w-5 h-5" />
         </div>
         <div>
-          <h2 className="font-extrabold text-lg tracking-tight text-white flex items-center gap-1">
-            Aptivo <span className="text-brand-400 font-normal text-sm">Connect</span>
+          <h2 className="font-serif font-normal text-xl tracking-tight text-white flex items-center gap-1">
+            Aptivo <span className="font-sans font-medium text-sm text-brand-400">Connect</span>
           </h2>
-          <p className="text-[10px] text-emerald-300 font-medium tracking-wide">
+          <p className="text-[11px] text-emerald-300 font-medium font-sans">
             Student Opportunity Hub
           </p>
         </div>

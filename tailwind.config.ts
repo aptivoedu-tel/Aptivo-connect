@@ -8,6 +8,12 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        serif: ["var(--font-dm-serif)", "DM Serif Display", "Georgia", "serif"],
+        display: ["var(--font-dm-serif)", "DM Serif Display", "Georgia", "serif"],
+        sans: ["var(--font-manrope)", "Manrope", "system-ui", "sans-serif"],
+        body: ["var(--font-manrope)", "Manrope", "system-ui", "sans-serif"],
+      },
       colors: {
         brand: {
           50: '#E4EEE8', 100: '#D4E5DA', 200: '#B6D3C1', 300: '#8DB79F', 400: '#5B9678',

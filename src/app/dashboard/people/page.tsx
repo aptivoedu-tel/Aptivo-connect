@@ -155,7 +155,7 @@ export default function PeoplePage() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
-      <div className="mx-auto w-full max-w-7xl"><p className="text-sm font-medium text-emerald-800">Connections</p><h2 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">Discover people</h2><div className="mt-5 flex gap-6 border-b border-slate-200"><span className="border-b-2 border-emerald-800 px-1 pb-3 text-sm font-semibold text-emerald-900">Discover</span><Link href="/dashboard/links?tab=incoming" className="px-1 pb-3 text-sm font-medium text-slate-500 hover:text-slate-900">Requests</Link><Link href="/dashboard/links?tab=accepted" className="px-1 pb-3 text-sm font-medium text-slate-500 hover:text-slate-900">Connections</Link></div></div>
+      <div className="mx-auto w-full max-w-7xl"><p className="text-sm font-medium text-emerald-800 font-sans">Connections</p><h2 className="font-serif font-normal text-[30px] sm:text-[34px] leading-tight text-slate-950 mt-1">Discover people</h2><div className="mt-5 flex gap-6 border-b border-slate-200"><span className="border-b-2 border-emerald-800 px-1 pb-3 text-sm font-semibold text-emerald-900 font-sans">Discover</span><Link href="/dashboard/links?tab=incoming" className="px-1 pb-3 text-sm font-medium text-slate-500 hover:text-slate-900 font-sans">Requests</Link><Link href="/dashboard/links?tab=accepted" className="px-1 pb-3 text-sm font-medium text-slate-500 hover:text-slate-900 font-sans">Connections</Link></div></div>
 
       {/* Search & Filter Bar */}
       <div className="bg-white p-4 sm:p-6 rounded-3xl border border-slate-200/80 shadow-soft space-y-4">
