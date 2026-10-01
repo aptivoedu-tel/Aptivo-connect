@@ -3,6 +3,7 @@ import connectToDatabase from '@/lib/db';
 import User from '@/lib/models/User';
 import Project from '@/lib/models/Project';
 import Experience from '@/lib/models/Experience';
+import ProfileRecord from '@/lib/models/ProfileRecord';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,9 +23,10 @@ export async function GET(
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
+    if (user.privacy?.isPublic === false) return NextResponse.json({ error: 'This profile is private.' }, { status: 403 });
 
     // Fetch verified project showcases and experiences
-    const [projects, experiences] = await Promise.all([
+    const [projects, experiences, records] = await Promise.all([
       Project.find({
         $or: [{ ownerId: user._id }, { 'members.userId': user._id.toString() }],
         status: { $in: ['Approved', 'Active', 'Showcase'] },
@@ -33,6 +35,7 @@ export async function GET(
         'enrolledStudents.studentId': user._id,
         'enrolledStudents.status': { $in: ['Confirmed', 'Attended'] },
       }),
+      ProfileRecord.find({ userId: user._id, visibility: 'public' }).sort({ endDate: -1, createdAt: -1 }),
     ]);
 
     // Format public view respecting privacy settings
@@ -40,6 +43,7 @@ export async function GET(
       _id: user._id,
       fullName: user.fullName || user.name,
       avatarUrl: user.profilePhoto || user.avatarUrl,
+      coverImage: user.coverImage,
       accountType: user.accountType || user.role,
       role: user.role,
       university: user.university,
@@ -52,12 +56,14 @@ export async function GET(
       industry: user.industry,
       city: user.city,
       bio: user.bio,
+      headline: user.headline,
       skills: user.skills || [],
       interests: user.interests || [],
-      github: user.github || user.githubUrl,
-      linkedin: user.linkedin || user.linkedinUrl,
-      portfolio: user.portfolio || user.portfolioUrl,
-      otherLinks: user.otherLinks || [],
+      externalLinks: user.externalLinks || [
+        ...(user.linkedin || user.linkedinUrl ? [{ type: 'linkedin', url: user.linkedin || user.linkedinUrl }] : []),
+        ...(user.github || user.githubUrl ? [{ type: 'github', url: user.github || user.githubUrl }] : []),
+        ...(user.portfolio || user.portfolioUrl ? [{ type: 'portfolio', url: user.portfolio || user.portfolioUrl }] : []),
+      ],
       email: user.privacy?.showEmail ? user.email : undefined,
       phone: user.privacy?.showPhone ? user.phone : undefined,
       whatsapp: user.privacy?.showPhone ? user.whatsapp : undefined,
@@ -79,6 +85,7 @@ export async function GET(
         category: e.category,
         date: e.date,
       })),
+      records,
     };
 
     return NextResponse.json({ profile: publicProfile });

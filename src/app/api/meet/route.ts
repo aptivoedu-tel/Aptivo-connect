@@ -3,11 +3,13 @@ import connectToDatabase from '@/lib/db';
 import MeetRequest from '@/lib/models/MeetRequest';
 import User from '@/lib/models/User';
 import Notification from '@/lib/models/Notification';
+import { authError, requireAdmin, requireUser } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
   try {
+    const actor = await requireUser();
     await connectToDatabase();
     const { searchParams } = new URL(req.url);
     const studentEmail = searchParams.get('studentEmail');
@@ -15,33 +17,26 @@ export async function GET(req: Request) {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const query: any = {};
-    if (studentEmail) query.studentEmail = studentEmail.toLowerCase().trim();
+    if (actor.role === 'admin') {
+      if (studentEmail) query.studentEmail = studentEmail.toLowerCase().trim();
+    } else {
+      query.studentId = actor._id;
+    }
     if (status && status !== 'all' && status !== 'All') query.status = status;
 
     const meets = await MeetRequest.find(query).sort({ createdAt: -1 });
     return NextResponse.json({ meets });
-  } catch (error: unknown) {
-    const err = error as Error;
-    return NextResponse.json({ error: err.message }, { status: 500 });
-  }
+  } catch (error: unknown) { const auth = authError(error); return NextResponse.json(auth || { error: (error as Error).message }, { status: auth?.status || 500 }); }
 }
 
 export async function POST(req: Request) {
   try {
+    const student = await requireUser();
     await connectToDatabase();
     const body = await req.json();
 
     if (!body.field || !body.discussionTopic) {
       return NextResponse.json({ error: 'Field and Discussion Topic are required.' }, { status: 400 });
-    }
-
-    if (!body.studentEmail) {
-      return NextResponse.json({ error: 'Authentication required. Please sign in to request a meeting.' }, { status: 401 });
-    }
-
-    const student = await User.findOne({ email: body.studentEmail.trim().toLowerCase() });
-    if (!student) {
-      return NextResponse.json({ error: 'Student account not found.' }, { status: 404 });
     }
 
     const newRequest = await MeetRequest.create({
@@ -70,14 +65,12 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json({ success: true, meet: newRequest }, { status: 201 });
-  } catch (error: unknown) {
-    const err = error as Error;
-    return NextResponse.json({ error: err.message }, { status: 500 });
-  }
+  } catch (error: unknown) { const auth = authError(error); return NextResponse.json(auth || { error: (error as Error).message }, { status: auth?.status || 500 }); }
 }
 
 export async function PATCH(req: Request) {
   try {
+    await requireAdmin();
     await connectToDatabase();
     const body = await req.json();
     const { id, status, scheduledDetails, mentorAssigned, scheduledDate, meetingLink, feedback } = body;
@@ -125,8 +118,5 @@ export async function PATCH(req: Request) {
 
     await meet.save();
     return NextResponse.json({ success: true, meet });
-  } catch (error: unknown) {
-    const err = error as Error;
-    return NextResponse.json({ error: err.message }, { status: 500 });
-  }
+  } catch (error: unknown) { const auth = authError(error); return NextResponse.json(auth || { error: (error as Error).message }, { status: auth?.status || 500 }); }
 }

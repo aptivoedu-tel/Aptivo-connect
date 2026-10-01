@@ -1,18 +1,14 @@
 import { NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/db';
 import User from '@/lib/models/User';
-import { seedDatabase } from '@/lib/seedData';
 import bcrypt from 'bcryptjs';
+import { createSessionToken, SESSION_COOKIE, sessionCookieOptions } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
   try {
     const conn = await connectToDatabase();
-    if (conn) {
-      await seedDatabase().catch(() => {});
-    }
-
     const body = await req.json();
     const { email, password } = body;
 
@@ -23,45 +19,8 @@ export async function POST(req: Request) {
     const cleanEmail = email.trim().toLowerCase();
     const providedPassword = password || '';
 
-    // If DB is offline/unreachable, provide graceful fallback for primary demo/admin accounts
+    // Authentication cannot be safely performed while the user store is unavailable.
     if (!conn) {
-      if (cleanEmail === 'admin@connect.aptivo' || cleanEmail === 'admin.@connect.aptivo') {
-        if (providedPassword === 'aptivo.co' || providedPassword === 'admin') {
-          return NextResponse.json({
-            success: true,
-            redirectTo: '/admin',
-            user: {
-              _id: 'admin-fallback-id',
-              fullName: 'Aptivo Admin',
-              name: 'Aptivo Admin',
-              email: 'admin@connect.aptivo',
-              accountType: 'admin',
-              role: 'admin',
-              status: 'admin',
-            },
-          });
-        }
-      }
-      if (cleanEmail === 'hamza.raza@aptivo.pk') {
-        if (providedPassword === 'aptivo.co') {
-          return NextResponse.json({
-            success: true,
-            redirectTo: '/dashboard',
-            user: {
-              _id: 'student-fallback-id',
-              fullName: 'Hamza Raza',
-              name: 'Hamza Raza',
-              email: 'hamza.raza@aptivo.pk',
-              accountType: 'student',
-              role: 'student',
-              status: 'student',
-              university: 'FAST-NUCES Karachi',
-              degree: 'BS Computer Science',
-            },
-          });
-        }
-      }
-
       return NextResponse.json(
         { error: 'Database connection unavailable. Please check your internet connection or MongoDB Atlas IP whitelist.' },
         { status: 503 }
@@ -103,7 +62,7 @@ export async function POST(req: Request) {
       redirectTo = '/admin';
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       redirectTo,
       user: {
@@ -121,8 +80,11 @@ export async function POST(req: Request) {
         avatarUrl: user.profilePhoto || user.avatarUrl,
       },
     });
+    response.cookies.set(SESSION_COOKIE, createSessionToken(user), sessionCookieOptions);
+    return response;
   } catch (error: unknown) {
     const err = error as Error;
+    if (err.message.includes('SESSION_SECRET')) return NextResponse.json({ error: 'Login is temporarily unavailable because secure sessions are not configured.' }, { status: 503 });
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

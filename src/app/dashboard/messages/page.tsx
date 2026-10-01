@@ -2,7 +2,10 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { rememberInternalNavigation, useHistoryBack } from '@/components/BackButton';
+import Avatar from '@/components/Avatar';
+import Ably from 'ably';
 import {
   MessageSquare,
   Send,
@@ -48,6 +51,9 @@ interface IMessage {
 }
 
 export default function MessagesPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const backToChats = useHistoryBack('/dashboard/messages');
   const [conversations, setConversations] = useState<IConversation[]>([]);
   const [activeConv, setActiveConv] = useState<IConversation | null>(null);
   const [messages, setMessages] = useState<IMessage[]>([]);
@@ -72,9 +78,8 @@ export default function MessagesPage() {
         setCurrentUserId(id);
         setCurrentUserEmail(email);
 
-        const urlParams = new URLSearchParams(window.location.search);
-        const recipientParam = urlParams.get('recipient');
-        const convParam = urlParams.get('conv');
+        const recipientParam = searchParams.get('recipient');
+        const convParam = searchParams.get('conv');
 
         loadConversations(email, id, recipientParam, convParam);
       } catch {}
@@ -97,7 +102,7 @@ export default function MessagesPage() {
       if (convParam) {
         const target = list.find((c) => c._id === convParam);
         if (target) {
-          selectConversation(target, email);
+          selectConversation(target, email, false);
           return;
         }
       }
@@ -116,14 +121,14 @@ export default function MessagesPage() {
             ...list.filter((c) => c._id !== startData.conversation._id),
           ];
           setConversations(freshList);
-          selectConversation(startData.conversation, email);
+          const conversationUrl = `/dashboard/messages?conv=${encodeURIComponent(startData.conversation._id)}`;
+          rememberInternalNavigation(conversationUrl);
+          router.replace(conversationUrl);
+          selectConversation(startData.conversation, email, false);
           return;
         }
       }
 
-      if (list.length > 0 && !activeConv) {
-        selectConversation(list[0], email);
-      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -131,7 +136,12 @@ export default function MessagesPage() {
     }
   };
 
-  const selectConversation = async (conv: IConversation, email = currentUserEmail) => {
+  const selectConversation = async (conv: IConversation, email = currentUserEmail, updateHistory = true) => {
+    if (updateHistory && searchParams.get('conv') !== conv._id) {
+      const conversationUrl = `/dashboard/messages?conv=${encodeURIComponent(conv._id)}`;
+      rememberInternalNavigation(conversationUrl);
+      router.push(conversationUrl);
+    }
     setActiveConv(conv);
     try {
       const res = await fetch(
@@ -146,23 +156,33 @@ export default function MessagesPage() {
     }
   };
 
-  // Real-time polling when active conversation is selected
+  useEffect(() => {
+    const conversationId = searchParams.get('conv');
+    if (!conversationId) {
+      setActiveConv(null);
+      setMessages([]);
+      return;
+    }
+    const conversation = conversations.find((item) => item._id === conversationId);
+    if (conversation && conversation._id !== activeConv?._id) {
+      selectConversation(conversation, currentUserEmail, false);
+    }
+  }, [searchParams, conversations, currentUserEmail, activeConv?._id]);
+
+  // Ably delivers persisted messages live. Initial/fallback fetches remain the source-of-truth recovery path.
   useEffect(() => {
     if (!activeConv) return;
-    const interval = setInterval(async () => {
-      try {
-        const res = await fetch(
-          `/api/messages?conversationId=${activeConv._id}&email=${encodeURIComponent(currentUserEmail)}`
-        );
-        const data = await res.json();
-        if (data.messages) {
-          setMessages(data.messages);
-        }
-      } catch {}
-    }, 3000);
-
-    return () => clearInterval(interval);
-  }, [activeConv, currentUserEmail]);
+    const realtime = new Ably.Realtime({ authUrl: '/api/realtime/token', authMethod: 'GET' });
+    const channel = realtime.channels.get(`conversation:${activeConv._id}`);
+    const onMessage = (event: { data?: unknown }) => {
+      const incoming = event.data as IMessage | undefined;
+      if (!incoming?._id || !incoming.content) return;
+      setMessages((previous) => previous.some((message) => message._id === incoming._id) ? previous : [...previous, incoming]);
+      setConversations((previous) => previous.map((conversation) => conversation._id === activeConv._id ? { ...conversation, lastMessage: incoming.content, lastMessageAt: incoming.createdAt } : conversation).sort((a, b) => new Date(b.lastMessageAt || 0).getTime() - new Date(a.lastMessageAt || 0).getTime()));
+    };
+    channel.subscribe('message.created', onMessage);
+    return () => { channel.unsubscribe('message.created', onMessage); realtime.close(); };
+  }, [activeConv]);
 
   // Scroll to bottom
   useEffect(() => {
@@ -229,7 +249,7 @@ export default function MessagesPage() {
   const activePartner = getOtherParticipant(activeConv);
 
   return (
-    <div className="bg-white rounded-3xl border border-slate-200/80 shadow-soft overflow-hidden h-[calc(100vh-140px)] flex flex-col">
+    <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden h-[calc(100dvh-150px)] min-h-[540px] flex flex-col">
       <div className="flex flex-1 overflow-hidden">
         {/* Left Sidebar: Conversations List */}
         <aside
@@ -242,7 +262,7 @@ export default function MessagesPage() {
             <div className="flex items-center justify-between">
               <h2 className="font-extrabold text-slate-900 text-lg flex items-center gap-2">
                 <MessageSquare className="w-5 h-5 text-brand-600" />
-                <span>Messages</span>
+                <span>Chats</span>
               </h2>
               <Link
                 href="/dashboard/people"
@@ -258,14 +278,14 @@ export default function MessagesPage() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search conversations..."
-                className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                placeholder="Search chats"
+                className="aptivo-input w-full min-h-11 rounded-xl pl-9 pr-3 text-sm"
               />
             </div>
           </div>
 
           {/* List */}
-          <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
+          <div className="flex-1 divide-y divide-[#E4E7E2] overflow-y-auto">
             {loading ? (
               <div className="py-12 text-center text-slate-400 text-xs">Loading conversations...</div>
             ) : filteredConversations.length === 0 ? (
@@ -291,32 +311,18 @@ export default function MessagesPage() {
                   <button
                     key={conv._id}
                     onClick={() => selectConversation(conv)}
-                    className={`w-full p-4 flex items-center gap-3 text-left transition-colors ${
-                      isSelected ? 'bg-white border-l-4 border-l-brand-600' : 'hover:bg-slate-100/70'
+                    className={`flex w-full items-center gap-3 p-4 text-left transition-colors ${
+                      isSelected ? 'border-l-4 border-l-[#287A5B] bg-[#E4EEE8]/70' : 'hover:bg-[#F7F6F1]'
                     }`}
                   >
-                    <div className="relative w-11 h-11 rounded-2xl overflow-hidden bg-slate-200 shrink-0">
-                      {partner?.profilePhoto || partner?.avatarUrl ? (
-                        <Image
-                          src={partner.profilePhoto || partner.avatarUrl || ''}
-                          alt=""
-                          fill
-                          className="object-cover"
-                          unoptimized
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center font-black text-slate-700 text-sm">
-                          {displayName.charAt(0)}
-                        </div>
-                      )}
-                    </div>
+                    <Avatar src={partner?.profilePhoto || partner?.avatarUrl} name={displayName} size={44}/>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-1">
-                        <span className="font-extrabold text-xs text-slate-900 truncate">
+                        <span className="truncate text-xs font-extrabold text-[#18201C]">
                           {displayName}
                         </span>
                         {conv.lastMessageAt && (
-                          <span className="text-[10px] text-slate-400 shrink-0">
+                          <span className="shrink-0 text-[10px] text-[#69736D]">
                             {new Date(conv.lastMessageAt).toLocaleTimeString([], {
                               hour: '2-digit',
                               minute: '2-digit',
@@ -324,7 +330,7 @@ export default function MessagesPage() {
                           </span>
                         )}
                       </div>
-                      <p className="text-[11px] text-slate-500 truncate mt-0.5">
+                      <p className="mt-0.5 truncate text-[11px] text-[#69736D]">
                         {conv.lastMessage || 'Click to view messages'}
                       </p>
                     </div>
@@ -340,34 +346,23 @@ export default function MessagesPage() {
           {activeConv && activePartner ? (
             <>
               {/* Chat Header */}
-              <div className="p-4 border-b border-slate-200/80 flex items-center justify-between gap-3 bg-white">
+              <div className="flex items-center justify-between gap-3 border-b border-[#E4E7E2] bg-white p-4">
                 <div className="flex items-center gap-3 min-w-0">
                   <button
-                    onClick={() => setActiveConv(null)}
+                    onClick={() => {
+                      if (searchParams.get('conv')) backToChats();
+                      else setActiveConv(null);
+                    }}
                     className="md:hidden p-1.5 rounded-xl text-slate-500 hover:bg-slate-100"
                   >
                     <ArrowLeft className="w-5 h-5" />
                   </button>
-                  <div className="relative w-10 h-10 rounded-2xl overflow-hidden bg-slate-200 shrink-0">
-                    {activePartner.profilePhoto || activePartner.avatarUrl ? (
-                      <Image
-                        src={activePartner.profilePhoto || activePartner.avatarUrl || ''}
-                        alt=""
-                        fill
-                        className="object-cover"
-                        unoptimized
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center font-black text-slate-700 text-sm">
-                        {activePartner.name?.charAt(0) || 'U'}
-                      </div>
-                    )}
-                  </div>
+                  <Avatar src={activePartner.profilePhoto || activePartner.avatarUrl} name={activePartner.fullName || activePartner.name} size={40}/>
                   <div className="min-w-0">
-                    <h3 className="font-extrabold text-sm text-slate-900 truncate">
+                    <h3 className="truncate text-sm font-extrabold text-[#18201C]">
                       {activePartner.fullName || activePartner.name}
                     </h3>
-                    <p className="text-[11px] text-slate-500 truncate">
+                    <p className="truncate text-[11px] text-[#69736D]">
                       {activePartner.university || activePartner.organization || activePartner.jobTitle || 'Aptivo Builder'}
                     </p>
                   </div>
@@ -375,7 +370,7 @@ export default function MessagesPage() {
 
                 <div className="flex items-center gap-2">
                   <Link
-                    href={`/dashboard/profile?email=${activePartner.email}`}
+                    href={`/profile/${activePartner._id}`}
                     className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold"
                   >
                     <span>Profile</span>
@@ -385,7 +380,7 @@ export default function MessagesPage() {
               </div>
 
               {/* Messages Scroll Area */}
-              <div className="flex-1 p-4 sm:p-6 overflow-y-auto space-y-3 bg-[#F8FAFC]">
+              <div className="flex-1 space-y-3 overflow-y-auto bg-[#F7F6F1] p-4 sm:p-6">
                 {messages.length === 0 ? (
                   <div className="py-20 text-center space-y-2">
                     <Sparkles className="w-8 h-8 text-brand-500 mx-auto" />
@@ -410,8 +405,8 @@ export default function MessagesPage() {
                         <div
                           className={`max-w-[80%] sm:max-w-[70%] rounded-2xl p-3.5 text-xs sm:text-sm leading-relaxed shadow-xs ${
                             isMine
-                              ? 'bg-slate-900 text-white rounded-br-xs'
-                              : 'bg-white text-slate-800 border border-slate-200/80 rounded-bl-xs'
+                              ? 'bg-[#174D3A] text-white rounded-br-xs'
+                              : 'border border-[#E4E7E2] bg-white text-[#18201C] rounded-bl-xs'
                           }`}
                         >
                           <p className="whitespace-pre-wrap">{msg.content}</p>
@@ -432,19 +427,19 @@ export default function MessagesPage() {
               {/* Message Input Box */}
               <form
                 onSubmit={handleSendMessage}
-                className="p-3 sm:p-4 border-t border-slate-200/80 bg-white flex items-center gap-2"
+                className="flex items-center gap-2 border-t border-[#E4E7E2] bg-white p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:p-4"
               >
                 <input
                   type="text"
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
-                  placeholder="Type your message... (Press Enter to send)"
-                  className="flex-1 px-4 py-3 rounded-2xl border border-slate-200 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 bg-slate-50/60"
+                  placeholder="Message…"
+                  className="aptivo-input min-h-11 flex-1 rounded-2xl px-4 text-sm"
                 />
                 <button
                   type="submit"
                   disabled={!inputText.trim() || sending}
-                  className="px-5 py-3 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-md shadow-brand-600/20 transition-all disabled:opacity-50 flex items-center gap-1.5 shrink-0"
+                  className="flex shrink-0 items-center gap-1.5 rounded-2xl bg-[#174D3A] px-5 py-3 text-xs font-bold text-white transition hover:bg-[#287A5B] disabled:opacity-50"
                 >
                   <Send className="w-4 h-4" />
                   <span className="hidden sm:inline">Send</span>
@@ -453,10 +448,10 @@ export default function MessagesPage() {
             </>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-3 text-slate-400">
-              <MessageSquare className="w-12 h-12 text-slate-300" />
-              <h3 className="font-extrabold text-slate-700 text-base">No conversation selected</h3>
-              <p className="text-xs text-slate-500 max-w-sm">
-                Choose a conversation from the sidebar or find a builder to message directly.
+              <div className="grid h-16 w-16 place-items-center rounded-2xl bg-[#E4EEE8] text-[#174D3A]"><MessageSquare className="h-7 w-7" /></div>
+              <h3 className="aptivo-display text-2xl font-semibold text-[#18201C]">Start a conversation</h3>
+              <p className="max-w-sm text-sm text-[#69736D]">
+                Find someone through Campus, Connections or Build.
               </p>
             </div>
           )}

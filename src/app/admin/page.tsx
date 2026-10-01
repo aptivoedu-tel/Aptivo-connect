@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
+import Avatar from '@/components/Avatar';
+import MediaImage from '@/components/MediaImage';
 import {
   LayoutDashboard,
   Users,
@@ -51,6 +52,7 @@ type AdminTab =
   | 'build'
   | 'meetup'
   | 'experience'
+  | 'ambassador'
   | 'showcase'
   | 'users'
   | 'partners'
@@ -77,6 +79,7 @@ export default function AdminPortal() {
   const [projects, setProjects] = useState<any[]>([]);
   const [meetups, setMeetups] = useState<any[]>([]);
   const [experiences, setExperiences] = useState<any[]>([]);
+  const [ambassadorApplications, setAmbassadorApplications] = useState<any[]>([]);
   const [usersList, setUsersList] = useState<any[]>([]);
   const [partners, setPartners] = useState<any[]>([]);
   const [dispatchLogs, setDispatchLogs] = useState<any[]>([]);
@@ -143,12 +146,13 @@ export default function AdminPortal() {
   const loadAllData = async () => {
     setLoading(true);
     try {
-      const [statsRes, projRes, meetRes, expRes, usersRes] = await Promise.all([
+      const [statsRes, projRes, meetRes, expRes, usersRes, ambassadorRes] = await Promise.all([
         fetch('/api/stats').then((r) => r.json()).catch(() => ({})),
         fetch('/api/build?status=all').then((r) => r.json()).catch(() => ({})),
         fetch('/api/meetups?status=all').then((r) => r.json()).catch(() => ({})),
         fetch('/api/experience').then((r) => r.json()).catch(() => ({})),
         fetch('/api/people?limit=100').then((r) => r.json()).catch(() => ({})),
+        fetch('/api/ambassador/applications?status=all').then((r) => r.json()).catch(() => ({})),
       ]);
 
       if (statsRes.stats) {
@@ -168,6 +172,7 @@ export default function AdminPortal() {
       if (meetRes.meetups) setMeetups(meetRes.meetups);
       if (expRes.experiences) setExperiences(expRes.experiences);
       if (usersRes.users) setUsersList(usersRes.users);
+      if (ambassadorRes.applications) setAmbassadorApplications(ambassadorRes.applications);
     } catch (e) {
       console.error('Error loading admin data:', e);
     } finally {
@@ -348,6 +353,7 @@ export default function AdminPortal() {
     { id: 'build', label: 'BUILD Projects', icon: Hammer, badge: stats.pendingProjectsCount || undefined },
     { id: 'meetup', label: 'MEETUP Sessions', icon: Users },
     { id: 'experience', label: 'EXPERIENCE Labs', icon: Building2 },
+    { id: 'ambassador', label: 'Ambassador', icon: Radio },
     { id: 'showcase', label: 'Showcase', icon: Award },
     { id: 'users', label: 'Users Directory', icon: UserCheck },
     { id: 'notifications', label: 'Notifications Hub', icon: Bell },
@@ -372,6 +378,7 @@ export default function AdminPortal() {
       {/* Top Admin Header */}
       <header className="sticky top-0 z-30 bg-slate-900 text-white border-b border-slate-800 px-4 sm:px-8 py-3.5 flex items-center justify-between shadow-md">
         <div className="flex items-center gap-3">
+          <button onClick={() => setMobileMenuOpen((open) => !open)} className="lg:hidden p-2 rounded-xl bg-slate-800 text-slate-200" aria-label="Toggle admin modules"><Menu className="w-4 h-4" /></button>
           <div className="w-9 h-9 rounded-xl bg-brand-500 flex items-center justify-center text-slate-950 font-black">
             <ShieldCheck className="w-5 h-5" />
           </div>
@@ -407,8 +414,9 @@ export default function AdminPortal() {
 
       {/* Main Admin Workspace */}
       <div className="flex-1 flex flex-col lg:flex-row p-3 sm:p-6 gap-6 max-w-7xl mx-auto w-full">
+        {mobileMenuOpen && <div className="lg:hidden bg-white rounded-3xl p-3 border border-slate-200 shadow-soft grid grid-cols-2 gap-2">{navTabs.map((tab) => { const Icon = tab.icon; return <button key={tab.id} onClick={() => { setActiveTab(tab.id as AdminTab); setMobileMenuOpen(false); }} className={`min-h-11 flex items-center gap-2 rounded-xl px-3 text-xs font-bold ${activeTab === tab.id ? 'bg-slate-900 text-white' : 'bg-slate-50 text-slate-700'}`}><Icon className="w-4 h-4" />{tab.label}</button>; })}</div>}
         {/* Navigation Sidebar */}
-        <aside className="w-full lg:w-64 shrink-0 bg-white rounded-3xl p-4 border border-slate-200/80 shadow-soft self-start space-y-1">
+        <aside className="hidden lg:block w-64 shrink-0 bg-white rounded-3xl p-4 border border-slate-200/80 shadow-soft self-start space-y-1">
           <div className="px-3 py-2 text-[10px] uppercase font-bold tracking-wider text-slate-400">
             Admin Modules
           </div>
@@ -523,15 +531,7 @@ export default function AdminPortal() {
                       <tr key={p._id} className="hover:bg-slate-50/50">
                         <td className="p-3.5">
                           <div className="flex items-center gap-3">
-                            <div className="relative w-10 h-10 rounded-xl overflow-hidden bg-slate-200 shrink-0">
-                              {p.coverImage ? (
-                                <Image src={p.coverImage} alt="" fill className="object-cover" unoptimized />
-                              ) : (
-                                <div className="w-full h-full flex items-center justify-center font-bold text-slate-600">
-                                  {p.title?.charAt(0)}
-                                </div>
-                              )}
-                            </div>
+                            <MediaImage src={p.coverImage} alt={p.title || 'Project'} kind="build" className="h-10 w-10 rounded-xl shrink-0" />
                             <div>
                               <p className="font-extrabold text-slate-900">{p.title}</p>
                               <p className="text-[11px] text-slate-500 line-clamp-1">{p.building || p.problem}</p>
@@ -574,6 +574,10 @@ export default function AdminPortal() {
             </div>
           )}
 
+          {activeTab === 'ambassador' && (
+            <div className="space-y-5"><div className="pb-4 border-b border-slate-100"><h3 className="text-xl font-extrabold text-slate-900">Ambassador Applications</h3><p className="text-xs text-slate-500">Review the existing Ambassador Program pipeline.</p></div>{ambassadorApplications.length === 0 ? <div className="p-10 rounded-3xl bg-slate-50 border border-dashed border-slate-300 text-center text-xs text-slate-500">No ambassador applications yet.</div> : <div className="space-y-3">{ambassadorApplications.map((application) => <div key={application._id} className="rounded-2xl border border-slate-200 p-4 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between"><div><p className="font-bold text-sm text-slate-900">{application.fullName}</p><p className="text-xs text-slate-500">{application.university} · {application.email}</p></div><StatusPill status={application.status} /></div>)}</div>}</div>
+          )}
+
           {/* TAB 3: MEETUP SESSIONS */}
           {activeTab === 'meetup' && (
             <div className="space-y-6">
@@ -596,15 +600,7 @@ export default function AdminPortal() {
                 {meetups.map((m) => (
                   <div key={m._id} className="p-5 rounded-3xl border border-slate-200/80 bg-slate-50/50 space-y-3">
                     <div className="flex items-center gap-3">
-                      <div className="relative w-14 h-14 rounded-2xl overflow-hidden bg-slate-200 shrink-0">
-                        {m.coverImage ? (
-                          <Image src={m.coverImage} alt="" fill className="object-cover" unoptimized />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center font-bold text-slate-700">
-                            {m.title?.charAt(0)}
-                          </div>
-                        )}
-                      </div>
+                      <MediaImage src={m.coverImage} alt={m.title || 'Meetup'} kind="meet" className="h-14 w-14 rounded-2xl shrink-0" />
                       <div className="min-w-0">
                         <span className="text-[10px] font-bold uppercase text-brand-700">{m.category}</span>
                         <h4 className="font-extrabold text-sm text-slate-900 truncate">{m.title}</h4>
@@ -648,15 +644,7 @@ export default function AdminPortal() {
                 {experiences.map((exp) => (
                   <div key={exp._id} className="p-5 rounded-3xl border border-slate-200/80 bg-slate-50/50 space-y-3">
                     <div className="flex items-center gap-3">
-                      <div className="relative w-14 h-14 rounded-2xl overflow-hidden bg-slate-200 shrink-0">
-                        {exp.posterUrl || exp.image ? (
-                          <Image src={exp.posterUrl || exp.image} alt="" fill className="object-cover" unoptimized />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center font-bold text-slate-700">
-                            {exp.title?.charAt(0)}
-                          </div>
-                        )}
-                      </div>
+                      <MediaImage src={exp.posterUrl || exp.image} alt={exp.title || 'Experience'} kind="experience" className="h-14 w-14 rounded-2xl shrink-0" />
                       <div className="min-w-0">
                         <span className="text-[10px] font-bold uppercase text-brand-700">{exp.category}</span>
                         <h4 className="font-extrabold text-sm text-slate-900 truncate">{exp.title}</h4>
@@ -752,15 +740,7 @@ export default function AdminPortal() {
                       <tr key={u._id} className="hover:bg-slate-50/50">
                         <td className="p-3.5">
                           <div className="flex items-center gap-3">
-                            <div className="relative w-8 h-8 rounded-xl overflow-hidden bg-slate-200 shrink-0">
-                              {u.profilePhoto || u.avatarUrl ? (
-                                <Image src={u.profilePhoto || u.avatarUrl} alt="" fill className="object-cover" unoptimized />
-                              ) : (
-                                <div className="w-full h-full flex items-center justify-center font-bold text-slate-700">
-                                  {u.name?.charAt(0)}
-                                </div>
-                              )}
-                            </div>
+                            <Avatar src={u.profilePhoto || u.avatarUrl} name={u.fullName || u.name || 'User'} size={32} className="rounded-xl" />
                             <span className="font-extrabold text-slate-900">{u.fullName || u.name}</span>
                           </div>
                         </td>
@@ -775,7 +755,7 @@ export default function AdminPortal() {
                         <td className="p-3.5 text-slate-500 font-mono text-[11px]">{u.email}</td>
                         <td className="p-3.5">
                           <Link
-                            href={`/dashboard/profile?email=${u.email}`}
+                            href={`/profile/${u._id}`}
                             className="font-bold text-brand-600 hover:underline"
                           >
                             View &rarr;
@@ -860,13 +840,7 @@ export default function AdminPortal() {
               <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
                 <label className="block text-xs font-bold text-slate-700">Project Poster / Cover Image</label>
                 <div className="flex items-center gap-4">
-                  <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-slate-200 shrink-0">
-                    {projPosterUrl ? (
-                      <Image src={projPosterUrl} alt="" fill className="object-cover" unoptimized />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-slate-400 text-xs">No Poster</div>
-                    )}
-                  </div>
+                  <MediaImage src={projPosterUrl} alt="Project poster preview" kind="build" className="h-16 w-16 rounded-xl shrink-0" />
                   <div className="space-y-1">
                     <input
                       type="file"
@@ -995,13 +969,7 @@ export default function AdminPortal() {
               <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
                 <label className="block text-xs font-bold text-slate-700">Meetup Poster / Banner</label>
                 <div className="flex items-center gap-4">
-                  <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-slate-200 shrink-0">
-                    {meetPosterUrl ? (
-                      <Image src={meetPosterUrl} alt="" fill className="object-cover" unoptimized />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-slate-400 text-xs">No Poster</div>
-                    )}
-                  </div>
+                  <MediaImage src={meetPosterUrl} alt="Meetup poster preview" kind="meet" className="h-16 w-16 rounded-xl shrink-0" />
                   <div className="space-y-1">
                     <input
                       type="file"
@@ -1141,13 +1109,7 @@ export default function AdminPortal() {
               <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
                 <label className="block text-xs font-bold text-slate-700">Experience Poster / Photo</label>
                 <div className="flex items-center gap-4">
-                  <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-slate-200 shrink-0">
-                    {expPosterUrl ? (
-                      <Image src={expPosterUrl} alt="" fill className="object-cover" unoptimized />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-slate-400 text-xs">No Poster</div>
-                    )}
-                  </div>
+                  <MediaImage src={expPosterUrl} alt="Experience poster preview" kind="experience" className="h-16 w-16 rounded-xl shrink-0" />
                   <div className="space-y-1">
                     <input
                       type="file"

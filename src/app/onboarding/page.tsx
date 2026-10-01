@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   Sparkles,
@@ -78,7 +78,6 @@ const PRESET_INTERESTS_PRO = [
 
 function OnboardingInner() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [targetEmail, setTargetEmail] = useState('');
 
   const [step, setStep] = useState(1);
@@ -117,26 +116,12 @@ function OnboardingInner() {
 
   // Fetch initial profile if exists
   useEffect(() => {
-    let email = searchParams.get('email');
-    if (!email && typeof window !== 'undefined') {
-      try {
-        const stored = JSON.parse(localStorage.getItem('aptivo_user') || '{}');
-        email = stored.email;
-      } catch {}
-    }
-
-    if (!email) {
-      setLoading(false);
-      return;
-    }
-
-    setTargetEmail(email);
-
-    fetch(`/api/profile?email=${encodeURIComponent(email)}`)
+    fetch('/api/profile', { cache: 'no-store' })
       .then((res) => res.json())
       .then((data) => {
         if (data.user) {
           const u = data.user;
+          setTargetEmail(u.email || '');
           setFullName(u.fullName || u.name || '');
           setAccountType(u.accountType || u.role || 'student');
           if (u.phone) setPhone(u.phone);
@@ -161,7 +146,7 @@ function OnboardingInner() {
       })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [searchParams]);
+  }, []);
 
   const handleAddSkill = (skill: string) => {
     const trimmed = skill.trim();
@@ -226,7 +211,7 @@ function OnboardingInner() {
     } else {
       setCompleted(true);
       setTimeout(() => {
-        router.push('/dashboard');
+        router.replace('/dashboard');
       }, 1500);
     }
   };

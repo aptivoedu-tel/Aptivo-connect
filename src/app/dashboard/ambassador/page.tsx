@@ -133,7 +133,7 @@ export default function AmbassadorPage() {
     if (email) {
       setCurrentUserEmail(email);
       checkApplication(email);
-      fetch(`/api/profile?email=${encodeURIComponent(email)}`)
+      fetch('/api/profile', { cache: 'no-store' })
         .then((r) => r.json())
         .then((d) => {
           if (d.user) {

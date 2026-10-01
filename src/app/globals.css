@@ -4,17 +4,26 @@
 
 @layer base {
   :root {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
+    --background: 48 21% 95%;
+    --foreground: 138 13% 11%;
   }
 
   body {
-    @apply bg-[#F8FAFC] text-slate-900 antialiased selection:bg-brand-500 selection:text-white;
+    @apply bg-[#F7F6F1] text-[#18201C] antialiased selection:bg-[#287A5B] selection:text-white;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  input, select, textarea {
+    font-size: max(16px, 1em);
   }
 }
 
-/* Custom modern scrollbars */
+.safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+
+/* Quiet Aptivo scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -25,20 +34,18 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.4);
+  background: #c9d0ca;
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(100, 116, 139, 0.6);
+  background: #8f9b92;
 }
 
-/* Glassmorphism & custom utility classes */
+/* Compatibility utilities for legacy surfaces. New UI should use the tokens above. */
 .glass-panel {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(226, 232, 240, 0.8);
+  background: #fff;
+  border: 1px solid #e4e7e2;
 }
 
 .dark-card {
@@ -46,10 +53,11 @@
   color: #f8fafc;
 }
 
-.gradient-text {
-  @apply bg-clip-text text-transparent bg-gradient-to-r from-slate-900 via-brand-800 to-emerald-600;
-}
+.gradient-text { color: #174D3A; }
+.gradient-badge { background: #E4EEE8; color: #174D3A; }
 
-.gradient-badge {
-  background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(14, 165, 233, 0.1) 100%);
-}
+.aptivo-display { font-family: Georgia, 'Times New Roman', serif; letter-spacing: -.045em; }
+.aptivo-surface { border: 1px solid #E4E7E2; background: #fff; box-shadow: 0 1px 2px rgba(24,32,28,.035); }
+.aptivo-chip { border-radius: 9999px; background: #E4EEE8; color: #174D3A; }
+.aptivo-input { border: 1px solid #E4E7E2; background: #fff; color: #18201C; }
+.aptivo-input:focus { border-color: #287A5B; outline: 2px solid rgba(40,122,91,.16); outline-offset: 1px; }

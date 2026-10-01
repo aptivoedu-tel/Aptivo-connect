@@ -4,6 +4,11 @@ export interface IUserPrivacy {
   isPublic: boolean;
   showEmail: boolean;
   showPhone: boolean;
+  appearInDiscovery?: boolean;
+  appearInCampus?: boolean;
+  allowConnectionRequests?: boolean;
+  openToQuestions?: boolean;
+  questionTopics?: string[];
 }
 
 export interface IUserReputation {
@@ -30,6 +35,7 @@ export interface IUser extends Document {
   city?: string;
   profilePhoto?: string;
   avatarUrl?: string; // alias for backwards compatibility
+  coverImage?: string;
 
   // Student specific fields
   university?: string;
@@ -50,6 +56,7 @@ export interface IUser extends Document {
 
   // Profile details
   bio?: string;
+  headline?: string;
   skills: string[];
   interests: string[];
   linkedin?: string;
@@ -59,6 +66,7 @@ export interface IUser extends Document {
   portfolio?: string;
   portfolioUrl?: string;
   otherLinks?: string[];
+  externalLinks?: Array<{ type: 'linkedin' | 'github' | 'youtube' | 'website' | 'portfolio' | 'other'; label?: string; url: string }>;
 
   // Privacy controls
   privacy: IUserPrivacy;
@@ -102,6 +110,7 @@ const UserSchema: Schema<IUser> = new Schema(
     whatsapp: { type: String },
     city: { type: String },
     profilePhoto: { type: String },
+    coverImage: { type: String },
     avatarUrl: {
       type: String,
       default: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
@@ -126,6 +135,7 @@ const UserSchema: Schema<IUser> = new Schema(
 
     // Profile details
     bio: { type: String, default: '' },
+    headline: { type: String, maxlength: 160, default: '' },
     skills: { type: [String], default: [] },
     interests: { type: [String], default: [] },
     linkedin: { type: String },
@@ -135,12 +145,18 @@ const UserSchema: Schema<IUser> = new Schema(
     portfolio: { type: String },
     portfolioUrl: { type: String },
     otherLinks: { type: [String], default: [] },
+    externalLinks: [{ type: { type: String, enum: ['linkedin', 'github', 'youtube', 'website', 'portfolio', 'other'] }, label: { type: String, maxlength: 80 }, url: { type: String, required: true, maxlength: 2048 } }],
 
     // Privacy
     privacy: {
       isPublic: { type: Boolean, default: true },
       showEmail: { type: Boolean, default: false },
       showPhone: { type: Boolean, default: false },
+        appearInDiscovery: { type: Boolean, default: true },
+        appearInCampus: { type: Boolean, default: true },
+        allowConnectionRequests: { type: Boolean, default: true },
+        openToQuestions: { type: Boolean, default: false },
+        questionTopics: { type: [String], default: [] },
     },
 
     // Activity stats

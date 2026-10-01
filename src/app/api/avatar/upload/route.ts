@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/db';
-import User from '@/lib/models/User';
 import { uploadToGridFS } from '@/lib/gridfs';
+import { authError, requireUser } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,11 +10,9 @@ const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
 
 export async function POST(req: Request) {
   try {
-    await connectToDatabase();
+    const user = await requireUser(); await connectToDatabase();
     const formData = await req.formData();
     const file = formData.get('file') as File | null;
-    const email = formData.get('email') as string | null;
-    const userId = formData.get('userId') as string | null;
 
     if (!file) {
       return NextResponse.json({ error: 'No image file provided' }, { status: 400 });
@@ -32,18 +30,6 @@ export async function POST(req: Request) {
         { error: 'File too large. Maximum image size is 5MB.' },
         { status: 400 }
       );
-    }
-
-    // Resolve user
-    let user = null;
-    if (userId) {
-      user = await User.findById(userId);
-    } else if (email) {
-      user = await User.findOne({ email: email.toLowerCase().trim() });
-    }
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
     const arrayBuffer = await file.arrayBuffer();
@@ -65,7 +51,6 @@ export async function POST(req: Request) {
       fileId,
     });
   } catch (error: unknown) {
-    const err = error as Error;
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    const auth = authError(error); return NextResponse.json(auth || { error: 'Unable to upload your profile photo. Please try again.' }, { status: auth?.status || 500 });
   }
 }

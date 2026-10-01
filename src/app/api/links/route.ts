@@ -4,6 +4,7 @@ import Link from '@/lib/models/Link';
 import User from '@/lib/models/User';
 import NotificationEngine from '@/lib/services/notificationService';
 import mongoose from 'mongoose';
+import { authError, requireUser } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,24 +12,14 @@ const USER_POPULATE_FIELDS = '_id fullName name email role accountType status av
 
 export async function GET(req: Request) {
   try {
-    await connectToDatabase();
+    const currentUser = await requireUser(); await connectToDatabase();
     const { searchParams } = new URL(req.url);
-    const userId = searchParams.get('userId');
-    const userEmail = searchParams.get('email');
     const targetUserId = searchParams.get('targetUserId'); // to check link status with specific user
     const status = searchParams.get('status'); // 'accepted' | 'pending' | 'all'
 
     // If searching status between two users
-    if ((userId || userEmail) && targetUserId) {
-      let currentUserId = userId;
-      if (!currentUserId && userEmail) {
-        const u = await User.findOne({ email: userEmail.toLowerCase().trim() });
-        if (u) currentUserId = u._id.toString();
-      }
-
-      if (!currentUserId) {
-        return NextResponse.json({ error: 'User not found' }, { status: 404 });
-      }
+    if (targetUserId) {
+      const currentUserId = currentUser._id.toString();
 
       const existingLink = await Link.findOne({
         $or: [
@@ -59,15 +50,7 @@ export async function GET(req: Request) {
     }
 
     // Resolve target user
-    let uid = userId;
-    if (!uid && userEmail) {
-      const u = await User.findOne({ email: userEmail.toLowerCase().trim() });
-      if (u) uid = u._id.toString();
-    }
-
-    if (!uid) {
-      return NextResponse.json({ error: 'userId or email parameter required' }, { status: 400 });
-    }
+    const uid = currentUser._id.toString();
 
     const query: Record<string, unknown> = {
       $or: [{ requester: uid }, { recipient: uid }],
@@ -108,30 +91,16 @@ export async function GET(req: Request) {
       totalConnected: accepted.length,
     });
   } catch (error: unknown) {
-    const err = error as Error;
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    const auth = authError(error); return NextResponse.json(auth || { error: (error as Error).message }, { status: auth?.status || 500 });
   }
 }
 
 export async function POST(req: Request) {
   try {
-    await connectToDatabase();
+    const requesterUser = await requireUser(); await connectToDatabase();
     const body = await req.json();
-    const { requesterId, requesterEmail, recipientId, note } = body;
-
-    // Resolve requester
-    let reqId = requesterId;
-    let requesterUser = null;
-    if (!reqId && requesterEmail) {
-      requesterUser = await User.findOne({ email: requesterEmail.toLowerCase().trim() });
-      if (requesterUser) reqId = requesterUser._id.toString();
-    } else if (reqId) {
-      requesterUser = await User.findById(reqId);
-    }
-
-    if (!reqId || !requesterUser) {
-      return NextResponse.json({ error: 'Requester user not found' }, { status: 401 });
-    }
+    const { recipientId, note } = body;
+    const reqId = requesterUser._id.toString();
 
     if (!recipientId) {
       return NextResponse.json({ error: 'Recipient ID is required' }, { status: 400 });
@@ -145,6 +114,7 @@ export async function POST(req: Request) {
     if (!recipientUser) {
       return NextResponse.json({ error: 'Recipient user not found' }, { status: 404 });
     }
+    if (recipientUser.privacy?.allowConnectionRequests === false) return NextResponse.json({ error: 'This member is not accepting connection requests.' }, { status: 403 });
 
     // Check existing relationship
     let existingLink = await Link.findOne({
@@ -172,7 +142,7 @@ export async function POST(req: Request) {
             eventType: 'LINK_ACCEPTED',
             title: 'Link Request Accepted',
             message: `${requesterUser.fullName || requesterUser.name} accepted your Link request. You are now connected!`,
-            link: `/dashboard/profile?id=${reqId}`,
+            link: `/profile/${reqId}`,
             type: 'link',
           });
 
@@ -205,7 +175,7 @@ export async function POST(req: Request) {
       eventType: 'LINK_REQUEST',
       title: 'New Link Request',
       message: `${requesterUser.fullName || requesterUser.name} sent you a Link request.${note ? ` Note: "${note}"` : ''}`,
-      link: `/dashboard/profile?id=${reqId}`,
+      link: `/profile/${reqId}`,
       type: 'link',
     });
 
@@ -215,7 +185,6 @@ export async function POST(req: Request) {
       link: existingLink,
     }, { status: 201 });
   } catch (error: unknown) {
-    const err = error as Error;
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    const auth = authError(error); return NextResponse.json(auth || { error: (error as Error).message }, { status: auth?.status || 500 });
   }
 }

@@ -2,9 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
+import MediaImage from '@/components/MediaImage';
 import {
   Sparkles,
   Award,
@@ -70,27 +68,26 @@ export default function ShowcasePage() {
   });
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col font-sans">
-      <Navbar />
+    <div className="w-full bg-[#f7f9f8] font-sans">
 
       {/* Header Banner */}
-      <section className="pt-12 pb-16 bg-gradient-to-b from-emerald-50/60 to-[#F8FAFC] border-b border-slate-200/80">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
+      <section className="border-b border-slate-200/70 bg-white py-8 sm:py-10">
+        <div className="mx-auto max-w-7xl space-y-3 px-4 sm:px-6 lg:px-8">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-100/80 text-emerald-900 text-xs font-bold border border-emerald-200">
             <Award className="w-3.5 h-3.5 text-brand-600" />
             <span>Built Through Aptivo Connect</span>
           </div>
-          <h1 className="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight">
-            Verified Student Project Showcase
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">
+            Built by Connect teams
           </h1>
-          <p className="text-sm sm:text-base text-slate-600 max-w-2xl mx-auto leading-relaxed">
-            Real products, research pipelines, and systems built by collaborative student teams with verified Aptivo badges.
+          <p className="max-w-2xl text-sm leading-6 text-slate-600">
+            A look at the work students have brought to life together.
           </p>
         </div>
       </section>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex-1 space-y-8 w-full">
+      <div className="mx-auto w-full max-w-7xl flex-1 space-y-8 px-1 py-3 sm:px-4">
         {/* Filter Bar */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex flex-wrap gap-2">
@@ -142,16 +139,7 @@ export default function ShowcasePage() {
                 <div className="space-y-4">
                   {/* Cover Image */}
                   <div className="relative w-full h-44 rounded-2xl overflow-hidden mb-3">
-                    <Image
-                      src={
-                        proj.coverImage ||
-                        'https://images.unsplash.com/photo-1526778548025-fa2f459cd5c1?w=800&auto=format&fit=crop&q=80'
-                      }
-                      alt={proj.title}
-                      fill
-                      className="object-cover group-hover:scale-105 transition-transform duration-300"
-                      unoptimized
-                    />
+                    <MediaImage src={proj.coverImage} alt={proj.title} kind="build" className="h-full w-full group-hover:scale-105 transition-transform duration-300" />
                     <span className="absolute top-3 right-3 px-3 py-1 rounded-full bg-emerald-950/80 backdrop-blur-md text-emerald-300 border border-emerald-500/40 text-[10px] font-bold flex items-center gap-1 shadow-sm">
                       <CheckCircle2 className="w-3 h-3 text-emerald-400" />
                       Verified Outcome
@@ -236,9 +224,8 @@ export default function ShowcasePage() {
             ))}
           </div>
         )}
-      </main>
+      </div>
 
-      <Footer />
     </div>
   );
 }

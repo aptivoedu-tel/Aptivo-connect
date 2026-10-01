@@ -98,7 +98,7 @@ export default function RegisterPage() {
         }
         setSuccess(true);
         setTimeout(() => {
-          router.push(data.redirectTo || `/onboarding?email=${encodeURIComponent(email)}`);
+          router.replace(data.redirectTo || `/onboarding?email=${encodeURIComponent(email)}`);
         }, 1000);
       }
     } catch (err: unknown) {

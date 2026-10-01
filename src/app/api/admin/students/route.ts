@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/db';
 import User from '@/lib/models/User';
+import { authError, requireAdmin } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
   try {
+    await requireAdmin();
     await connectToDatabase();
     const { searchParams } = new URL(req.url);
     const search = searchParams.get('search') || '';
@@ -31,8 +33,5 @@ export async function GET(req: Request) {
     const users = await User.find(query).sort({ createdAt: -1 });
 
     return NextResponse.json({ users });
-  } catch (error: unknown) {
-    const err = error as Error;
-    return NextResponse.json({ error: err.message }, { status: 500 });
-  }
+  } catch (error: unknown) { const auth = authError(error); return NextResponse.json(auth || { error: (error as Error).message }, { status: auth?.status || 500 }); }
 }

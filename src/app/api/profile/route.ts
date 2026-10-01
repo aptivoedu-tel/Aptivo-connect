@@ -5,23 +5,22 @@ import Project from '@/lib/models/Project';
 import Experience from '@/lib/models/Experience';
 import MeetRequest from '@/lib/models/MeetRequest';
 import { calculateProfileCompletion } from '@/lib/profileUtils';
+import { authError, requireUser } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
+const externalLinkDomains: Record<string, string[]> = { linkedin: ['linkedin.com'], github: ['github.com'], youtube: ['youtube.com', 'youtu.be'] };
+function validExternalLinks(value: unknown) {
+  if (!Array.isArray(value)) return false;
+  return value.every((item) => {
+    if (!item || typeof item.url !== 'string' || typeof item.type !== 'string') return false;
+    try { const url = new URL(item.url); return ['http:', 'https:'].includes(url.protocol) && (!externalLinkDomains[item.type] || externalLinkDomains[item.type].some((domain) => url.hostname === domain || url.hostname.endsWith(`.${domain}`))); } catch { return false; }
+  });
+}
 
 export async function GET(req: Request) {
   try {
+    const user = await requireUser();
     await connectToDatabase();
-    const { searchParams } = new URL(req.url);
-    const email = searchParams.get('email');
-
-    if (!email) {
-      return NextResponse.json({ error: 'Email parameter is required.' }, { status: 400 });
-    }
-
-    const user = await User.findOne({ email: email.toLowerCase().trim() });
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
 
     const completion = calculateProfileCompletion(user.toObject());
 
@@ -44,26 +43,17 @@ export async function GET(req: Request) {
       },
     });
   } catch (error: unknown) {
-    const err = error as Error;
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    const auth = authError(error); return NextResponse.json(auth || { error: (error as Error).message }, { status: auth?.status || 500 });
   }
 }
 
 export async function PATCH(req: Request) {
   try {
+    const currentUser = await requireUser();
     await connectToDatabase();
     const body = await req.json();
-    const { email, ...updates } = body;
-
-    if (!email) {
-      return NextResponse.json({ error: 'Email is required to update profile' }, { status: 400 });
-    }
-
-    const targetEmail = email.toLowerCase().trim();
-    const user = await User.findOne({ email: targetEmail });
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
+    const { email: _ignoredEmail, ...updates } = body;
+    const user = currentUser;
 
     // Apply updates
     if (updates.fullName) {
@@ -81,6 +71,7 @@ export async function PATCH(req: Request) {
       user.avatarUrl = updates.avatarUrl;
       user.profilePhoto = updates.avatarUrl;
     }
+    if (updates.coverImage !== undefined) user.coverImage = updates.coverImage;
 
     // Student fields
     if (updates.university !== undefined) user.university = updates.university;
@@ -111,6 +102,7 @@ export async function PATCH(req: Request) {
 
     // Profile details
     if (updates.bio !== undefined) user.bio = updates.bio;
+    if (updates.headline !== undefined) user.headline = String(updates.headline).slice(0, 160);
     if (updates.skills !== undefined) user.skills = Array.isArray(updates.skills) ? updates.skills : [];
     if (updates.interests !== undefined) user.interests = Array.isArray(updates.interests) ? updates.interests : [];
     if (updates.linkedin !== undefined) {
@@ -126,6 +118,10 @@ export async function PATCH(req: Request) {
       user.portfolioUrl = updates.portfolio;
     }
     if (updates.otherLinks !== undefined) user.otherLinks = updates.otherLinks;
+    if (updates.externalLinks !== undefined) {
+      if (!validExternalLinks(updates.externalLinks)) return NextResponse.json({ error: 'External links must be valid HTTP/HTTPS URLs and match their selected platform.' }, { status: 400 });
+      user.externalLinks = updates.externalLinks.map((link: { type: string; label?: string; url: string }) => ({ type: link.type, label: String(link.label || '').slice(0, 80), url: link.url }));
+    }
 
     // Privacy
     if (updates.privacy) {
@@ -133,6 +129,11 @@ export async function PATCH(req: Request) {
         isPublic: updates.privacy.isPublic ?? user.privacy?.isPublic ?? true,
         showEmail: updates.privacy.showEmail ?? user.privacy?.showEmail ?? false,
         showPhone: updates.privacy.showPhone ?? user.privacy?.showPhone ?? false,
+        appearInDiscovery: updates.privacy.appearInDiscovery ?? user.privacy?.appearInDiscovery ?? true,
+        appearInCampus: updates.privacy.appearInCampus ?? user.privacy?.appearInCampus ?? true,
+        allowConnectionRequests: updates.privacy.allowConnectionRequests ?? user.privacy?.allowConnectionRequests ?? true,
+        openToQuestions: updates.privacy.openToQuestions ?? user.privacy?.openToQuestions ?? false,
+        questionTopics: Array.isArray(updates.privacy.questionTopics) ? updates.privacy.questionTopics.slice(0, 8) : user.privacy?.questionTopics ?? [],
       };
     }
 
@@ -147,7 +148,6 @@ export async function PATCH(req: Request) {
       completion,
     });
   } catch (error: unknown) {
-    const err = error as Error;
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    const auth = authError(error); return NextResponse.json(auth || { error: (error as Error).message }, { status: auth?.status || 500 });
   }
 }

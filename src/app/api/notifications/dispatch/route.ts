@@ -2,21 +2,21 @@ import { NextResponse } from 'next/server';
 import { NotificationEngine, NotificationPayload } from '@/lib/services/notificationService';
 import User from '@/lib/models/User';
 import connectToDatabase from '@/lib/db';
+import { authError, requireAdmin } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
+    await requireAdmin();
     const logs = NotificationEngine.getRecentDispatches();
     return NextResponse.json({ logs });
-  } catch (error: unknown) {
-    const err = error as Error;
-    return NextResponse.json({ error: err.message }, { status: 500 });
-  }
+  } catch (error: unknown) { const auth = authError(error); return NextResponse.json(auth || { error: (error as Error).message }, { status: auth?.status || 500 }); }
 }
 
 export async function POST(req: Request) {
   try {
+    await requireAdmin();
     await connectToDatabase();
     const body = await req.json();
     const { userEmail, eventType, title, message, details, link, type } = body;
@@ -42,8 +42,5 @@ export async function POST(req: Request) {
 
     const log = await NotificationEngine.dispatch(payload);
     return NextResponse.json({ success: true, log });
-  } catch (error: unknown) {
-    const err = error as Error;
-    return NextResponse.json({ error: err.message }, { status: 500 });
-  }
+  } catch (error: unknown) { const auth = authError(error); return NextResponse.json(auth || { error: (error as Error).message }, { status: auth?.status || 500 }); }
 }

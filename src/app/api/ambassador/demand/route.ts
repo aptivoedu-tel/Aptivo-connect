@@ -4,15 +4,15 @@ import CampusDemand from '@/lib/models/CampusDemand';
 import User from '@/lib/models/User';
 import AmbassadorApplication from '@/lib/models/AmbassadorApplication';
 import Notification from '@/lib/models/Notification';
+import { authError, requireUser } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
   try {
-    await connectToDatabase();
+    const user = await requireUser(); await connectToDatabase();
     const body = await req.json();
     const {
-      ambassadorEmail,
       campus,
       university,
       category,
@@ -21,14 +21,6 @@ export async function POST(req: Request) {
       description,
     } = body;
 
-    if (!ambassadorEmail) {
-      return NextResponse.json({ error: 'Authentication required. Please sign in.' }, { status: 401 });
-    }
-
-    const user = await User.findOne({ email: ambassadorEmail.trim().toLowerCase() });
-    if (!user) {
-      return NextResponse.json({ error: 'Ambassador user account not found.' }, { status: 404 });
-    }
 
     // Verify user is an approved ambassador
     const app = await AmbassadorApplication.findOne({
@@ -76,7 +68,6 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, demand }, { status: 201 });
   } catch (error: unknown) {
-    const err = error as Error;
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    const auth = authError(error); return NextResponse.json(auth || { error: (error as Error).message }, { status: auth?.status || 500 });
   }
 }

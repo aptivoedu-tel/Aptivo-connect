@@ -2,11 +2,13 @@ import { NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/db';
 import MeetRequest from '@/lib/models/MeetRequest';
 import User from '@/lib/models/User';
+import { authError, requireAdmin } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
+    await requireAdmin();
     await connectToDatabase();
 
     // Group pending requests by field
@@ -94,8 +96,5 @@ export async function GET() {
 
     const suggestions = Object.values(fieldMap);
     return NextResponse.json({ suggestions });
-  } catch (error: unknown) {
-    const err = error as Error;
-    return NextResponse.json({ error: err.message }, { status: 500 });
-  }
+  } catch (error: unknown) { const auth = authError(error); return NextResponse.json(auth || { error: (error as Error).message }, { status: auth?.status || 500 }); }
 }

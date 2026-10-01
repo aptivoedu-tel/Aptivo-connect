@@ -4,11 +4,13 @@ import CampusDemand from '@/lib/models/CampusDemand';
 import User from '@/lib/models/User';
 import MeetRequest from '@/lib/models/MeetRequest';
 import Project from '@/lib/models/Project';
+import { authError, requireUser } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
   try {
+    await requireUser();
     await connectToDatabase();
     const { searchParams } = new URL(req.url);
     const campus = searchParams.get('campus');
@@ -35,8 +37,5 @@ export async function GET(req: Request) {
         resolvedDemands: demands.filter((d) => d.status === 'Resolved' || d.status === 'Action Scheduled').length,
       },
     });
-  } catch (error: unknown) {
-    const err = error as Error;
-    return NextResponse.json({ error: err.message }, { status: 500 });
-  }
+  } catch (error: unknown) { const auth = authError(error); return NextResponse.json(auth || { error: (error as Error).message }, { status: auth?.status || 500 }); }
 }

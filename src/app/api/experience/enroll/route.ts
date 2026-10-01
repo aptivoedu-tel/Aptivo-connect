@@ -3,14 +3,15 @@ import connectToDatabase from '@/lib/db';
 import Experience from '@/lib/models/Experience';
 import User from '@/lib/models/User';
 import Notification from '@/lib/models/Notification';
+import { authError, requireUser } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
   try {
-    await connectToDatabase();
+    const student = await requireUser(); await connectToDatabase();
     const body = await req.json();
-    const { experienceId, studentEmail, whyAttend } = body;
+    const { experienceId, whyAttend, questionResponses = [] } = body;
 
     if (!experienceId) {
       return NextResponse.json({ error: 'Experience ID is required' }, { status: 400 });
@@ -21,14 +22,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Experience not found' }, { status: 404 });
     }
 
-    if (!studentEmail) {
-      return NextResponse.json({ error: 'Authentication required. Please sign in.' }, { status: 401 });
-    }
-
-    const student = await User.findOne({ email: studentEmail.trim().toLowerCase() });
-    if (!student) {
-      return NextResponse.json({ error: 'Student profile not found' }, { status: 404 });
-    }
+    if (exp.status === 'Completed') return NextResponse.json({ error: 'Registration is closed for this experience.' }, { status: 400 });
 
     // Check capacity limit
     const confirmedCount = exp.enrolledStudents.filter((s) => s.status !== 'Completed').length;
@@ -54,6 +48,7 @@ export async function POST(req: Request) {
       studentEmail: student.email,
       university: student.university || 'University',
       whyAttend: whyAttend || 'Interested in workplace exposure and industry interactions.',
+      questionResponses: Array.isArray(questionResponses) ? questionResponses : [],
       status: 'Confirmed',
       enrolledAt: new Date(),
     });
@@ -74,7 +69,6 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, experience: exp });
   } catch (error: unknown) {
-    const err = error as Error;
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    const auth = authError(error); return NextResponse.json(auth || { error: (error as Error).message }, { status: auth?.status || 500 });
   }
 }

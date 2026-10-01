@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
+import Avatar from '@/components/Avatar';
+import MediaImage from '@/components/MediaImage';
 import {
   User,
   GraduationCap,
@@ -140,6 +141,7 @@ export default function ProfilePage() {
   const [whatsapp, setWhatsapp] = useState('');
   const [city, setCity] = useState('');
   const [profilePhoto, setProfilePhoto] = useState('');
+  const [coverImage, setCoverImage] = useState('');
 
   // Student Fields
   const [university, setUniversity] = useState('');
@@ -198,24 +200,25 @@ export default function ProfilePage() {
     isComplete: false,
   });
 
-  const fetchProfile = async (targetEmail: string, loggedInEmail: string) => {
-    if (!targetEmail) {
-      setLoading(false);
-      return;
-    }
+  const fetchProfile = async () => {
     try {
-      const res = await fetch(`/api/profile?email=${encodeURIComponent(targetEmail)}`);
+      // The profile editor is protected by the signed server session. Browser
+      // storage is only a cache and may be empty or stale after a session restore.
+      const res = await fetch('/api/profile', { cache: 'no-store' });
       const data = await res.json();
-      if (data.user) {
+      if (res.ok && data.user) {
         const u = data.user;
         setProfileUserId(u._id);
         setUserEmail(u.email);
+        setCurrentLoggedInEmail(u.email || '');
+        setCurrentLoggedInUserId(u._id || '');
         setFullName(u.fullName || u.name || '');
         setAccountType(u.accountType || u.role || 'student');
         if (u.phone) setPhone(u.phone);
         if (u.whatsapp) setWhatsapp(u.whatsapp);
         if (u.city) setCity(u.city);
-        if (u.profilePhoto || u.avatarUrl) setProfilePhoto(u.profilePhoto || u.avatarUrl);
+        setProfilePhoto(u.profilePhoto || u.avatarUrl || '');
+        setCoverImage(u.coverImage || '');
 
         if (u.university) setUniversity(u.university);
         if (u.campus) setCampus(u.campus);
@@ -252,15 +255,10 @@ export default function ProfilePage() {
         if (data.activity?.experiences) setVerifiedExperiences(data.activity.experiences);
         if (data.completion) setCompletion(data.completion);
 
-        // Fetch link relationship if viewing another user
-        if (loggedInEmail && targetEmail.toLowerCase() !== loggedInEmail.toLowerCase()) {
-          setIsSelf(false);
-          setActiveTab('preview');
-          fetchLinkStatus(loggedInEmail, u._id);
-        } else {
-          setIsSelf(true);
-          fetchUserLinks(u._id);
-        }
+        // This route is the authenticated member's editor. Public profiles use
+        // /profile/[id], so never let a query/local-storage value select a user.
+        setIsSelf(true);
+        fetchUserLinks(u._id);
       }
     } catch (e) {
       console.error(e);
@@ -298,30 +296,7 @@ export default function ProfilePage() {
     }
   };
 
-  useEffect(() => {
-    let loggedInEmail = '';
-    let loggedInId = '';
-    let targetEmail = '';
-
-    if (typeof window !== 'undefined') {
-      try {
-        const stored = JSON.parse(localStorage.getItem('aptivo_user') || '{}');
-        loggedInEmail = stored.email || '';
-        loggedInId = stored._id || '';
-        setCurrentLoggedInEmail(loggedInEmail);
-        setCurrentLoggedInUserId(loggedInId);
-
-        const urlParams = new URLSearchParams(window.location.search);
-        targetEmail = urlParams.get('email') || loggedInEmail;
-      } catch {}
-    }
-
-    if (targetEmail) {
-      fetchProfile(targetEmail, loggedInEmail);
-    } else {
-      setLoading(false);
-    }
-  }, []);
+  useEffect(() => { fetchProfile(); }, []);
 
   const handleAvatarFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -344,6 +319,7 @@ export default function ProfilePage() {
       if (data.success && data.avatarUrl) {
         setProfilePhoto(data.avatarUrl);
         setAvatarUploadMsg('Photo uploaded and stored securely!');
+        window.dispatchEvent(new CustomEvent('aptivo:profile-updated', { detail: { avatarUrl: data.avatarUrl } }));
         // Update local storage user if self
         if (isSelf && typeof window !== 'undefined') {
           try {
@@ -475,6 +451,7 @@ export default function ProfilePage() {
           whatsapp,
           city,
           profilePhoto,
+          coverImage,
           university,
           campus,
           degree,
@@ -500,6 +477,9 @@ export default function ProfilePage() {
       });
       const data = await res.json();
       if (data.success) {
+        const savedAvatar = data.user?.profilePhoto || data.user?.avatarUrl || profilePhoto;
+        setProfilePhoto(savedAvatar);
+        window.dispatchEvent(new CustomEvent('aptivo:profile-updated', { detail: { avatarUrl: savedAvatar } }));
         setSaveSuccess(true);
         if (data.completion) setCompletion(data.completion);
         if (typeof window !== 'undefined') {
@@ -509,8 +489,8 @@ export default function ProfilePage() {
             stored.name = fullName;
             stored.university = university;
             stored.degree = degree;
-            stored.profilePhoto = profilePhoto;
-            stored.avatarUrl = profilePhoto;
+            stored.profilePhoto = savedAvatar;
+            stored.avatarUrl = savedAvatar;
             localStorage.setItem('aptivo_user', JSON.stringify(stored));
           } catch {}
         }
@@ -715,34 +695,34 @@ export default function ProfilePage() {
 
       {/* Profile Strength Banner (when in self view) */}
       {isSelf && activeTab !== 'links' && (
-        <div className="bg-gradient-to-r from-slate-900 via-darkpine-900 to-slate-950 rounded-3xl p-6 sm:p-8 text-white shadow-xl space-y-4">
+        <div className="rounded-2xl bg-white p-5 sm:p-6 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-brand-400" />
-                <span className="text-xs font-bold uppercase tracking-wider text-brand-300">
-                  Aptivo Identity Strength
+                <Sparkles className="w-4 h-4 text-emerald-700" />
+                <span className="text-sm font-semibold text-slate-900">
+                  Profile strength
                 </span>
               </div>
-              <h3 className="text-xl sm:text-2xl font-black">Profile {completion.score}% Complete</h3>
-              <p className="text-xs text-emerald-200/80 max-w-md">
-                A comprehensive profile increases your chance of acceptance into BUILD project teams and expert meetups.
+              <h3 className="text-lg font-semibold text-slate-950">{completion.score}% complete</h3>
+              <p className="max-w-md text-sm text-slate-600">
+                A complete profile helps people understand what you do and what you want to work on.
               </p>
             </div>
 
-            <div className="bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/10 sm:w-64 shrink-0 space-y-2">
-              <div className="flex items-center justify-between text-xs font-bold">
-                <span>Strength</span>
-                <span className="text-brand-400">{completion.score}%</span>
+            <div className="bg-slate-50 p-4 rounded-xl sm:w-64 shrink-0 space-y-2">
+              <div className="flex items-center justify-between text-xs font-medium text-slate-700">
+                <span>Profile completion</span>
+                <span className="text-emerald-800">{completion.score}%</span>
               </div>
-              <div className="w-full h-2.5 rounded-full bg-white/10 overflow-hidden">
+              <div className="w-full h-2 rounded-full bg-slate-200 overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-brand-400 to-emerald-400 rounded-full transition-all duration-500"
+                  className="h-full bg-emerald-700 rounded-full transition-all duration-300"
                   style={{ width: `${completion.score}%` }}
                 />
               </div>
               {completion.suggestions.length > 0 && (
-                <p className="text-[10px] text-emerald-200/70 truncate">
+                <p className="text-[11px] text-slate-500 truncate">
                   Next: {completion.suggestions[0]}
                 </p>
               )}
@@ -769,17 +749,9 @@ export default function ProfilePage() {
                   return (
                     <div key={link._id} className="bg-white rounded-2xl p-4 border border-amber-200/60 shadow-xs flex items-center justify-between gap-3">
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="relative w-10 h-10 rounded-xl overflow-hidden bg-slate-100 shrink-0">
-                          {reqUser?.avatarUrl || reqUser?.profilePhoto ? (
-                            <Image src={reqUser.avatarUrl || reqUser.profilePhoto || ''} alt="" fill className="object-cover" unoptimized />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center font-bold text-slate-600">
-                              {reqUser?.name?.charAt(0) || 'U'}
-                            </div>
-                          )}
-                        </div>
+                        <Avatar src={reqUser?.avatarUrl || reqUser?.profilePhoto} name={reqUser?.fullName || reqUser?.name || 'User'} size={40} />
                         <div className="min-w-0">
-                          <Link href={`/dashboard/profile?email=${reqUser?.email}`} className="text-xs font-bold text-slate-900 hover:text-brand-600 truncate block">
+                          <Link href={`/profile/${reqUser?._id}`} className="text-xs font-bold text-slate-900 hover:text-brand-600 truncate block">
                             {reqUser?.fullName || reqUser?.name}
                           </Link>
                           <p className="text-[11px] text-slate-500 truncate">
@@ -838,17 +810,9 @@ export default function ProfilePage() {
                   return (
                     <div key={link._id} className="p-4 rounded-2xl border border-slate-200/80 bg-slate-50/50 hover:bg-white transition-all space-y-3">
                       <div className="flex items-center gap-3">
-                        <div className="relative w-12 h-12 rounded-2xl overflow-hidden bg-slate-200 shrink-0">
-                          {partner?.avatarUrl || partner?.profilePhoto ? (
-                            <Image src={partner.avatarUrl || partner.profilePhoto || ''} alt="" fill className="object-cover" unoptimized />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center font-bold text-slate-600 text-base">
-                              {partner?.name?.charAt(0) || 'U'}
-                            </div>
-                          )}
-                        </div>
+                        <Avatar src={partner?.avatarUrl || partner?.profilePhoto} name={partner?.fullName || partner?.name || 'User'} size={48} />
                         <div className="min-w-0">
-                          <Link href={`/dashboard/profile?email=${partner?.email}`} className="font-bold text-xs text-slate-900 hover:text-brand-600 truncate block">
+                          <Link href={`/profile/${partner?._id}`} className="font-bold text-xs text-slate-900 hover:text-brand-600 truncate block">
                             {partner?.fullName || partner?.name}
                           </Link>
                           <p className="text-[11px] text-brand-700 font-semibold truncate">
@@ -861,7 +825,7 @@ export default function ProfilePage() {
                       </div>
                       <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
                         <Link
-                          href={`/dashboard/profile?email=${partner?.email}`}
+                          href={`/profile/${partner?._id}`}
                           className="text-[11px] font-bold text-slate-700 hover:text-brand-600"
                         >
                           View Profile &rarr;
@@ -897,15 +861,7 @@ export default function ProfilePage() {
 
             {/* Avatar Upload Area */}
             <div className="flex flex-col sm:flex-row items-center gap-6 p-4 rounded-2xl bg-slate-50 border border-slate-200/70">
-              <div className="relative w-20 h-20 rounded-2xl overflow-hidden bg-slate-200 border-2 border-brand-500 shadow-sm shrink-0">
-                {profilePhoto ? (
-                  <Image src={profilePhoto} alt={fullName} fill className="object-cover" unoptimized />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center font-black text-2xl text-slate-600">
-                    {fullName.charAt(0) || 'U'}
-                  </div>
-                )}
-              </div>
+              <Avatar src={profilePhoto} name={fullName || 'User'} size={80} className="border-2 border-brand-500 shadow-sm" />
               <div className="space-y-1.5 flex-1 text-center sm:text-left">
                 <h4 className="text-xs font-bold text-slate-900">Profile Picture (GridFS Encrypted)</h4>
                 <p className="text-[11px] text-slate-500">
@@ -1347,17 +1303,12 @@ export default function ProfilePage() {
             )}
           </div>
 
-          {/* Profile Card Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-6">
-            <div className="w-24 h-24 rounded-3xl bg-slate-900 text-white font-black text-3xl flex items-center justify-center border-4 border-white shadow-lg overflow-hidden relative shrink-0">
-              {profilePhoto ? (
-                <Image src={profilePhoto} alt={fullName} fill className="object-cover" unoptimized />
-              ) : (
-                fullName.charAt(0) || 'U'
-              )}
-            </div>
-
-            <div className="space-y-1">
+          {/* Living profile identity */}
+          <div className="overflow-hidden rounded-[24px] border border-[#E4E7E2] bg-white">
+            {coverImage ? <MediaImage src={coverImage} alt={`${fullName} cover`} kind="build" className="h-32 sm:h-44"/> : <div className="relative h-32 overflow-hidden bg-[#E4EEE8] sm:h-44"><div className="absolute -right-8 -top-16 h-48 w-48 rounded-full border border-[#287A5B]/40"/><div className="absolute left-[18%] top-8 h-2.5 w-2.5 rounded-full bg-[#E86F51]"/><div className="absolute left-[28%] top-12 h-px w-40 rotate-[-18deg] bg-[#287A5B]/50"/><div className="absolute right-[22%] bottom-8 h-3 w-3 rounded-full bg-[#174D3A]"/></div>}
+            <div className="relative px-5 pb-5 sm:px-7">
+              <Avatar src={profilePhoto} name={fullName || 'User'} size={96} className="-mt-12 border-4 border-white shadow-sm" />
+              <div className="mt-3 space-y-1">
               <div className="flex items-center gap-2">
                 <h2 className="text-2xl sm:text-3xl font-black text-slate-900">{fullName}</h2>
                 <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold flex items-center gap-1">
@@ -1369,6 +1320,7 @@ export default function ProfilePage() {
                 {accountType === 'student' ? `${degree || 'Student'} • ${university || 'University'}` : `${jobTitle || 'Professional'} • ${organization || 'Organization'}`}
               </p>
               <p className="text-xs text-slate-400">{city || 'Pakistan'}</p>
+              </div>
             </div>
           </div>
 

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/db';
 import { uploadToGridFS } from '@/lib/gridfs';
+import { authError, requireAdmin } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,7 +10,7 @@ const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
 
 export async function POST(req: Request) {
   try {
-    await connectToDatabase();
+    await requireAdmin(); await connectToDatabase();
     const formData = await req.formData();
     const file = formData.get('file') as File | null;
     const category = (formData.get('category') as string) || 'general';
@@ -47,7 +48,6 @@ export async function POST(req: Request) {
       filename,
     });
   } catch (error: unknown) {
-    const err = error as Error;
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    const auth = authError(error); return NextResponse.json(auth || { error: 'Unable to upload the image. Please try again.' }, { status: auth?.status || 500 });
   }
 }

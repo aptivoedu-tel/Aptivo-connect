@@ -51,7 +51,7 @@ export default function LoginPage() {
         }
         setSuccessMsg(`Welcome, ${data.user?.fullName || data.user?.name || 'User'}! Redirecting...`);
         setTimeout(() => {
-          router.push(data.redirectTo || '/dashboard');
+          router.replace(data.redirectTo || '/dashboard');
         }, 600);
       }
     } catch (err: unknown) {

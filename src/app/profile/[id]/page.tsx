@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
+import BackButton from '@/components/BackButton';
+import Avatar from '@/components/Avatar';
 import {
   Sparkles,
   ArrowLeft,
@@ -22,8 +23,6 @@ import {
   ShieldCheck,
   Plus,
 } from 'lucide-react';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
 
 export default function PublicProfilePage({ params }: { params: { id: string } }) {
   const [profileData, setProfileData] = useState<any>(null);
@@ -103,35 +102,25 @@ export default function PublicProfilePage({ params }: { params: { id: string } }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC] flex flex-col font-sans">
-        <Navbar />
+      <div className="w-full bg-[#f7f9f8] font-sans">
         <div className="flex-1 flex items-center justify-center p-8">
           <p className="text-sm font-semibold text-slate-500 animate-pulse">Loading builder profile...</p>
         </div>
-        <Footer />
       </div>
     );
   }
 
   if (error || !profileData) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC] flex flex-col font-sans">
-        <Navbar />
+      <div className="w-full bg-[#f7f9f8] font-sans">
         <div className="flex-1 max-w-2xl mx-auto py-20 px-4 text-center space-y-4">
           <div className="w-16 h-16 rounded-3xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto text-2xl font-bold">
             !
           </div>
           <h2 className="text-2xl font-black text-slate-900">Profile Not Found</h2>
           <p className="text-sm text-slate-500">{error || 'This user profile does not exist or is private.'}</p>
-          <Link
-            href="/dashboard/build"
-            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-slate-900 text-white text-xs font-bold hover:bg-brand-600 transition-all"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Back to Build</span>
-          </Link>
+          <BackButton fallback="/dashboard/campus" className="rounded-full bg-slate-900 px-5 text-xs font-semibold text-white hover:bg-slate-800 hover:text-white">Back to Campus</BackButton>
         </div>
-        <Footer />
       </div>
     );
   }
@@ -156,19 +145,12 @@ export default function PublicProfilePage({ params }: { params: { id: string } }
   });
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col font-sans">
-      <Navbar />
+    <div className="w-full bg-[#f7f9f8] font-sans">
 
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex-1 w-full space-y-8">
+      <div className="mx-auto w-full max-w-6xl space-y-8 px-1 py-3 sm:px-4">
         {/* Back Link */}
         <div className="flex items-center justify-between">
-          <Link
-            href="/dashboard/build"
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-900 transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Discover Projects</span>
-          </Link>
+          <BackButton fallback="/dashboard/campus">Back</BackButton>
 
           {sharedProjects.length > 0 && (
             <button
@@ -188,19 +170,7 @@ export default function PublicProfilePage({ params }: { params: { id: string } }
         {/* 1. Header Card: Professional Identity */}
         <section className="bg-white rounded-3xl p-6 sm:p-10 border border-slate-200/80 shadow-soft relative overflow-hidden">
           <div className="flex flex-col sm:flex-row sm:items-start gap-6">
-            <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-3xl bg-slate-900 text-white font-black text-4xl flex items-center justify-center border-4 border-white shadow-xl overflow-hidden relative shrink-0">
-              {user.avatarUrl || user.profilePhoto ? (
-                <Image
-                  src={user.avatarUrl || user.profilePhoto}
-                  alt={user.fullName || user.name}
-                  fill
-                  className="object-cover"
-                  unoptimized
-                />
-              ) : (
-                (user.fullName || user.name || 'U').charAt(0)
-              )}
-            </div>
+            <Avatar src={user.avatarUrl || user.profilePhoto} name={user.fullName || user.name || 'User'} size={128} className="rounded-3xl border-4 border-white shadow-xl" />
 
             <div className="space-y-3 flex-1">
               <div className="flex flex-wrap items-center gap-2.5">
@@ -567,7 +537,7 @@ export default function PublicProfilePage({ params }: { params: { id: string } }
             </div>
           )}
         </section>
-      </main>
+      </div>
 
       {/* Endorse Modal */}
       {endorseModalOpen && selectedProject && (
@@ -644,7 +614,6 @@ export default function PublicProfilePage({ params }: { params: { id: string } }
         </div>
       )}
 
-      <Footer />
     </div>
   );
 }

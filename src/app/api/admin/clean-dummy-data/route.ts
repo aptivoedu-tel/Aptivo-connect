@@ -11,12 +11,14 @@ import Partner from '@/lib/models/Partner';
 import AmbassadorApplication from '@/lib/models/AmbassadorApplication';
 import Notification from '@/lib/models/Notification';
 import { seedDatabase } from '@/lib/seedData';
+import { authError, requireAdmin } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
 // Purges dummy seed data and ensures clean empty states with real admin intact
 export async function POST(req: Request) {
   try {
+    await requireAdmin();
     await connectToDatabase();
 
     // 1. Remove seeded fake users (keep real users & admin)
@@ -44,8 +46,5 @@ export async function POST(req: Request) {
       success: true,
       message: 'All dummy and seed data purged. Database is now in clean state with Admin preserved.',
     });
-  } catch (error: unknown) {
-    const err = error as Error;
-    return NextResponse.json({ error: err.message }, { status: 500 });
-  }
+  } catch (error: unknown) { const auth = authError(error); return NextResponse.json(auth || { error: (error as Error).message }, { status: auth?.status || 500 }); }
 }

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
+import Avatar from '@/components/Avatar';
 import {
   Users,
   Search,
@@ -155,21 +155,7 @@ export default function PeoplePage() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
-      {/* Top Banner */}
-      <div className="bg-gradient-to-r from-emerald-950 via-darkpine-900 to-slate-900 rounded-3xl p-6 sm:p-8 text-white relative overflow-hidden shadow-lg">
-        <div className="relative z-10 max-w-2xl space-y-2">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-900/80 border border-emerald-700/60 text-emerald-300 text-xs font-semibold">
-            <Sparkles className="w-3.5 h-3.5 text-brand-400" />
-            <span>Aptivo Builder Directory</span>
-          </div>
-          <h2 className="text-2xl sm:text-3xl font-black tracking-tight">
-            Discover Builders & Mentors
-          </h2>
-          <p className="text-xs sm:text-sm text-emerald-100/80 leading-relaxed">
-            Find peers across universities, collaborate on BUILD projects, and link with verified industry professionals.
-          </p>
-        </div>
-      </div>
+      <div className="mx-auto w-full max-w-7xl"><p className="text-sm font-medium text-emerald-800">Connections</p><h2 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">Discover people</h2><div className="mt-5 flex gap-6 border-b border-slate-200"><span className="border-b-2 border-emerald-800 px-1 pb-3 text-sm font-semibold text-emerald-900">Discover</span><Link href="/dashboard/links?tab=incoming" className="px-1 pb-3 text-sm font-medium text-slate-500 hover:text-slate-900">Requests</Link><Link href="/dashboard/links?tab=accepted" className="px-1 pb-3 text-sm font-medium text-slate-500 hover:text-slate-900">Connections</Link></div></div>
 
       {/* Search & Filter Bar */}
       <div className="bg-white p-4 sm:p-6 rounded-3xl border border-slate-200/80 shadow-soft space-y-4">
@@ -260,30 +246,16 @@ export default function PeoplePage() {
             return (
               <div
                 key={person._id}
-                className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/80 shadow-soft hover:shadow-lg transition-all flex flex-col justify-between space-y-4"
+                className="bg-white rounded-2xl p-4 border border-slate-200 hover:border-emerald-300 hover:shadow-md transition-all flex flex-col justify-between space-y-4"
               >
                 <div className="space-y-3">
                   {/* Card Header */}
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3">
-                      <div className="relative w-12 h-12 rounded-2xl overflow-hidden bg-slate-100 border border-brand-500/40 shrink-0">
-                        {person.profilePhoto || person.avatarUrl ? (
-                          <Image
-                            src={person.profilePhoto || person.avatarUrl || ''}
-                            alt={displayName}
-                            fill
-                            className="object-cover"
-                            unoptimized
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center font-black text-slate-700 text-lg">
-                            {displayName.charAt(0)}
-                          </div>
-                        )}
-                      </div>
+                      <Avatar src={person.profilePhoto || person.avatarUrl} name={displayName} size={48} />
                       <div>
                         <Link
-                          href={`/dashboard/profile?email=${person.email}`}
+                          href={`/profile/${person._id}`}
                           className="font-extrabold text-sm text-slate-900 hover:text-brand-600 truncate block"
                         >
                           {displayName}
@@ -297,13 +269,6 @@ export default function PeoplePage() {
 
                   {/* Headline & Location */}
                   <p className="text-xs font-semibold text-slate-700 line-clamp-1">{headline}</p>
-
-                  {/* Bio */}
-                  {person.bio && (
-                    <p className="text-[11px] text-slate-500 line-clamp-2 leading-relaxed">
-                      {person.bio}
-                    </p>
-                  )}
 
                   {/* Skills */}
                   {person.skills && person.skills.length > 0 && (
@@ -375,7 +340,7 @@ export default function PeoplePage() {
 
                   {/* View Profile */}
                   <Link
-                    href={`/dashboard/profile?email=${person.email}`}
+                    href={`/profile/${person._id}`}
                     className="p-2 rounded-xl border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors"
                     title="View Profile"
                   >

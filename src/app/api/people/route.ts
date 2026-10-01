@@ -2,31 +2,28 @@ import { NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/db';
 import User from '@/lib/models/User';
 import Link from '@/lib/models/Link';
+import { authError, requireUser } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
   try {
-    await connectToDatabase();
+    const viewer = await requireUser(); await connectToDatabase();
     const { searchParams } = new URL(req.url);
     const q = searchParams.get('q')?.trim() || '';
     const role = searchParams.get('role'); // 'student' | 'professional' | 'all'
     const field = searchParams.get('field');
-    const userEmail = searchParams.get('email');
-    const userId = searchParams.get('userId');
+    const university = searchParams.get('university');
+    const campus = searchParams.get('campus');
     const page = parseInt(searchParams.get('page') || '1', 10);
     const limit = parseInt(searchParams.get('limit') || '30', 10);
 
     // Resolve current viewer ID
-    let currentUid: string | null = userId;
-    if (!currentUid && userEmail) {
-      const viewer = await User.findOne({ email: userEmail.toLowerCase().trim() });
-      if (viewer) currentUid = viewer._id.toString();
-    }
+    const currentUid = viewer._id.toString();
 
     const query: Record<string, unknown> = {
       role: { $in: ['student', 'professional'] },
-      'privacy.isPublic': { $ne: false },
+      'privacy.isPublic': { $ne: false }, 'privacy.appearInDiscovery': { $ne: false },
     };
 
     if (role && role !== 'all') {
@@ -40,6 +37,8 @@ export async function GET(req: Request) {
         { industry: new RegExp(field, 'i') },
       ];
     }
+    if (university) query.university = new RegExp(`^${university.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
+    if (campus) query.campus = new RegExp(`^${campus.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
 
     if (q) {
       const regex = new RegExp(q, 'i');
@@ -57,9 +56,7 @@ export async function GET(req: Request) {
     }
 
     // Exclude viewer from list
-    if (currentUid) {
-      query._id = { $ne: currentUid };
-    }
+    query._id = { $ne: currentUid };
 
     const total = await User.countDocuments(query);
     const users = await User.find(query)
@@ -70,7 +67,7 @@ export async function GET(req: Request) {
 
     // Fetch link relationships for viewer if logged in
     let linkMap: Record<string, { state: string; linkId: string }> = {};
-    if (currentUid && users.length > 0) {
+    if (users.length > 0) {
       const userIds = users.map((u) => u._id);
       const links = await Link.find({
         $or: [
@@ -111,7 +108,6 @@ export async function GET(req: Request) {
       pages: Math.ceil(total / limit),
     });
   } catch (error: unknown) {
-    const err = error as Error;
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    const auth = authError(error); return NextResponse.json(auth || { error: (error as Error).message }, { status: auth?.status || 500 });
   }
 }

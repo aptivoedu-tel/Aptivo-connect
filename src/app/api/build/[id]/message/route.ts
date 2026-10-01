@@ -4,6 +4,7 @@ import ProjectApplication from '@/lib/models/ProjectApplication';
 import Project from '@/lib/models/Project';
 import User from '@/lib/models/User';
 import Notification from '@/lib/models/Notification';
+import { authError, requireUser } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,9 +13,9 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    await connectToDatabase();
+    const sender = await requireUser(); await connectToDatabase();
     const body = await req.json();
-    const { applicationId, senderEmail, message } = body;
+    const { applicationId, message } = body;
 
     if (!applicationId || !message) {
       return NextResponse.json({ error: 'Application ID and message text are required.' }, { status: 400 });
@@ -30,14 +31,9 @@ export async function POST(
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
 
-    if (!senderEmail) {
-      return NextResponse.json({ error: 'Authentication required. Please sign in.' }, { status: 401 });
-    }
-
-    const sender = await User.findOne({ email: senderEmail.trim().toLowerCase() });
-    if (!sender) {
-      return NextResponse.json({ error: 'Sender user account not found.' }, { status: 404 });
-    }
+    const isOwner = sender._id.toString() === project.ownerId?.toString();
+    const isApplicant = sender._id.toString() === application.applicantId?.toString();
+    if (!isOwner && !isApplicant && sender.role !== 'admin') return NextResponse.json({ error: 'Only project participants can message on this application.' }, { status: 403 });
 
     application.messages.push({
       senderId: sender._id,
@@ -49,7 +45,7 @@ export async function POST(
     await application.save();
 
     // Determine recipient (if sender is owner, recipient is applicant; if sender is applicant, recipient is owner)
-    const isOwnerSender = sender._id.toString() === project.ownerId?.toString();
+    const isOwnerSender = isOwner;
     const recipientId = isOwnerSender ? application.applicantId : project.ownerId;
 
     if (recipientId) {
@@ -64,7 +60,6 @@ export async function POST(
 
     return NextResponse.json({ success: true, application });
   } catch (error: unknown) {
-    const err = error as Error;
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    const auth = authError(error); return NextResponse.json(auth || { error: (error as Error).message }, { status: auth?.status || 500 });
   }
 }

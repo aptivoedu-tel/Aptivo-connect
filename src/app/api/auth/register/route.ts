@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/db';
 import User from '@/lib/models/User';
 import bcrypt from 'bcryptjs';
+import { createSessionToken, SESSION_COOKIE, sessionCookieOptions } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -163,7 +164,7 @@ export async function POST(req: Request) {
       },
     });
 
-    return NextResponse.json(
+    const response = NextResponse.json(
       {
         success: true,
         message: 'Account created successfully! Proceed to onboarding.',
@@ -185,8 +186,11 @@ export async function POST(req: Request) {
       },
       { status: 201 }
     );
+    response.cookies.set(SESSION_COOKIE, createSessionToken(newUser), sessionCookieOptions);
+    return response;
   } catch (error: unknown) {
     const err = error as Error;
+    if (err.message.includes('SESSION_SECRET')) return NextResponse.json({ error: 'Registration is temporarily unavailable because secure sessions are not configured.' }, { status: 503 });
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

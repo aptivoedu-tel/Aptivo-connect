@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@types/bcryptjs": "^2.4.6",
+    "ably": "^1.2.50",
     "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
     "lucide-react": "^0.436.0",

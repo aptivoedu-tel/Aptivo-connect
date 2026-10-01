@@ -21,15 +21,7 @@ export default function NotificationDropdown() {
 
   const fetchNotifications = async () => {
     try {
-      let email = '';
-      if (typeof window !== 'undefined') {
-        try {
-          const stored = JSON.parse(localStorage.getItem('aptivo_user') || '{}');
-          email = stored.email || '';
-        } catch {}
-      }
-      if (!email) return;
-      const res = await fetch(`/api/notifications?email=${encodeURIComponent(email)}`);
+      const res = await fetch('/api/notifications', { cache: 'no-store' });
       const data = await res.json();
       if (data.notifications) {
         setNotifications(data.notifications);
@@ -57,18 +49,10 @@ export default function NotificationDropdown() {
 
   const markAllAsRead = async () => {
     try {
-      let email = '';
-      if (typeof window !== 'undefined') {
-        try {
-          const stored = JSON.parse(localStorage.getItem('aptivo_user') || '{}');
-          email = stored.email || '';
-        } catch {}
-      }
-      if (!email) return;
       await fetch('/api/notifications', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ markAllRead: true, email }),
+        body: JSON.stringify({ markAllRead: true }),
       });
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
     } catch (e) {

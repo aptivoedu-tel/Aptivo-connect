@@ -3,32 +3,32 @@ import connectToDatabase from '@/lib/db';
 import AmbassadorApplication from '@/lib/models/AmbassadorApplication';
 import User from '@/lib/models/User';
 import Notification from '@/lib/models/Notification';
+import { authError, requireAdmin } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
 // Admin: get all applications with optional status filter
 export async function GET(req: Request) {
   try {
-    await connectToDatabase();
+    await requireAdmin(); await connectToDatabase();
     const { searchParams } = new URL(req.url);
     const status = searchParams.get('status');
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const query: any = {};
-    if (status && status !== 'All') query.status = status;
+    if (status && status.toLowerCase() !== 'all') query.status = status;
 
     const applications = await AmbassadorApplication.find(query).sort({ createdAt: -1 });
     return NextResponse.json({ applications });
   } catch (error: unknown) {
-    const err = error as Error;
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    const auth = authError(error); return NextResponse.json(auth || { error: (error as Error).message }, { status: auth?.status || 500 });
   }
 }
 
 // Admin: update application status (Under Review → Shortlisted → Accepted / Rejected)
 export async function PATCH(req: Request) {
   try {
-    await connectToDatabase();
+    await requireAdmin(); await connectToDatabase();
     const body = await req.json();
     const { applicationId, status, adminNotes, responsibilities } = body;
 
@@ -73,7 +73,6 @@ export async function PATCH(req: Request) {
 
     return NextResponse.json({ success: true, application });
   } catch (error: unknown) {
-    const err = error as Error;
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    const auth = authError(error); return NextResponse.json(auth || { error: (error as Error).message }, { status: auth?.status || 500 });
   }
 }

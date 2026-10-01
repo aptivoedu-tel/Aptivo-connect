@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1060" viewBox="0 0 1600 1060">
+  <rect width="1600" height="1060" fill="#F7F6F1"/>
+  <image href="aptivo-connect-master-reference.png" x="28" y="28" width="1040" height="1000" preserveAspectRatio="xMidYMid meet"/>
+  <g font-family="Arial, sans-serif" fill="#18201C">
+    <text x="1110" y="92" font-size="36" font-weight="700">Implementation map</text>
+    <text x="1110" y="126" font-size="18" fill="#69736D">Aptivo Connect master reference</text>
+    <g font-size="19"><text x="1110" y="205" font-weight="700" fill="#174D3A">1 · Landing</text><text x="1110" y="233">Editorial hero, natural imagery,</text><text x="1110" y="257">paths/nodes, rare coral CTA.</text>
+    <text x="1110" y="322" font-weight="700" fill="#174D3A">2 · Home</text><text x="1110" y="350">Real greeting, featured media,</text><text x="1110" y="374">compact discovery sections.</text>
+    <text x="1110" y="439" font-weight="700" fill="#174D3A">3 · Drawer</text><text x="1110" y="467">Session identity, grouped rows,</text><text x="1110" y="491">Sage active state, safe area.</text>
+    <text x="1110" y="556" font-weight="700" fill="#174D3A">4 · Build</text><text x="1110" y="584">Image opportunity cards, chips,</text><text x="1110" y="608">compact metadata, coral Apply.</text>
+    <text x="1110" y="673" font-weight="700" fill="#174D3A">5 · Chats</text><text x="1110" y="701">Conversation rows, not cards;</text><text x="1110" y="725">calm two-pane conversations.</text>
+    <text x="1110" y="790" font-weight="700" fill="#174D3A">6 · Profile</text><text x="1110" y="818">Cover + overlapping avatar +</text><text x="1110" y="842">real evidence/activity rows.</text></g>
+    <text x="1110" y="916" font-size="17" font-weight="700">Palette</text>
+  </g>
+  <g transform="translate(1110 936)"><rect width="55" height="36" rx="8" fill="#F7F6F1" stroke="#E4E7E2"/><rect x="65" width="55" height="36" rx="8" fill="#174D3A"/><rect x="130" width="55" height="36" rx="8" fill="#287A5B"/><rect x="195" width="55" height="36" rx="8" fill="#E4EEE8"/><rect x="260" width="55" height="36" rx="8" fill="#E86F51"/></g>
+</svg>

@@ -30,10 +30,13 @@ async function connectToDatabase(): Promise<typeof mongoose | null> {
 
   if (!cached.promise) {
     const opts = {
-      bufferCommands: true,
+      // Never queue user-facing queries while Atlas is unreachable. A queued
+      // lookup made the login form remain in its loading state indefinitely.
+      bufferCommands: false,
       maxPoolSize: 10,
-      serverSelectionTimeoutMS: 8000,
-      socketTimeoutMS: 15000,
+      serverSelectionTimeoutMS: 5000,
+      connectTimeoutMS: 5000,
+      socketTimeoutMS: 10000,
     };
 
     cached.promise = mongoose.connect(MONGODB_URI, opts).then((m) => {

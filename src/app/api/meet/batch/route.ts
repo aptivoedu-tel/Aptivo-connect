@@ -3,22 +3,22 @@ import connectToDatabase from '@/lib/db';
 import MeetRequest from '@/lib/models/MeetRequest';
 import CohortSession from '@/lib/models/CohortSession';
 import Notification from '@/lib/models/Notification';
+import { authError, requireAdmin } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
+    await requireAdmin();
     await connectToDatabase();
     const cohorts = await CohortSession.find().sort({ createdAt: -1 });
     return NextResponse.json({ cohorts });
-  } catch (error: unknown) {
-    const err = error as Error;
-    return NextResponse.json({ error: err.message }, { status: 500 });
-  }
+  } catch (error: unknown) { const auth = authError(error); return NextResponse.json(auth || { error: (error as Error).message }, { status: auth?.status || 500 }); }
 }
 
 export async function POST(req: Request) {
   try {
+    await requireAdmin();
     await connectToDatabase();
     const body = await req.json();
     const {
@@ -94,8 +94,5 @@ export async function POST(req: Request) {
       cohort,
       batchedStudentsCount: students.length,
     });
-  } catch (error: unknown) {
-    const err = error as Error;
-    return NextResponse.json({ error: err.message }, { status: 500 });
-  }
+  } catch (error: unknown) { const auth = authError(error); return NextResponse.json(auth || { error: (error as Error).message }, { status: auth?.status || 500 }); }
 }

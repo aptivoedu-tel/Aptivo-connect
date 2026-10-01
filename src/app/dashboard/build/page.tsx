@@ -12,7 +12,7 @@ import {
   Search,
 } from 'lucide-react';
 import StatusPill from '@/components/StatusPill';
-import Image from 'next/image';
+import MediaImage from '@/components/MediaImage';
 
 interface IMember {
   userId: string;
@@ -235,25 +235,20 @@ export default function BuildPage() {
   const categories = ['All', 'AI & Healthcare', 'Fintech & Software', 'Robotics & Hardware', 'Design'];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-7">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-100">
+      <div className="flex flex-col justify-between gap-4 border-b border-[#E4E7E2] pb-6 sm:flex-row sm:items-center">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-100 text-amber-900 text-xs font-bold mb-2">
+          <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-[#E4EEE8] px-3 py-1 text-xs font-bold text-[#174D3A]">
             <Hammer className="w-3.5 h-3.5" />
             <span>Pillar 2: BUILD</span>
           </div>
-          <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-            Build Real Projects with Student Teammates
-          </h2>
-          <p className="text-sm text-slate-500 mt-1 max-w-xl">
-            Discover curated, verified student initiatives or propose your own idea. Aptivo validates scope, structures briefs, and showcases completed work.
-          </p>
+          <h2 className="aptivo-display text-4xl font-semibold text-[#18201C]">Build with people who care.</h2>
         </div>
 
         <button
           onClick={() => setIsCreateModalOpen(true)}
-          className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-slate-900 hover:bg-brand-600 text-white text-sm font-bold shadow-md transition-all shrink-0"
+          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-[#174D3A] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#287A5B]"
         >
           <Plus className="w-4 h-4" />
           <span>Propose a Project</span>
@@ -270,8 +265,8 @@ export default function BuildPage() {
               onClick={() => setSelectedField(cat)}
               className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all ${
                 selectedField === cat
-                  ? 'bg-brand-600 text-white shadow-sm'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  ? 'bg-[#174D3A] text-white'
+                  : 'bg-white text-[#69736D] border border-[#E4E7E2] hover:bg-[#E4EEE8]'
               }`}
             >
               {cat}
@@ -286,8 +281,8 @@ export default function BuildPage() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by tech, title or skill..."
-            className="w-full pl-9 pr-4 py-2 rounded-2xl border border-slate-200 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+            placeholder="Search projects"
+            className="aptivo-input w-full min-h-11 rounded-xl pl-9 pr-4 text-sm"
           />
         </div>
       </div>
@@ -296,10 +291,10 @@ export default function BuildPage() {
       {loading ? (
         <div className="py-12 text-center text-slate-400 text-sm">Loading projects...</div>
       ) : filteredProjects.length === 0 ? (
-        <div className="p-12 bg-slate-50 rounded-3xl border border-dashed border-slate-300 text-center space-y-3">
-          <Hammer className="w-8 h-8 text-slate-400 mx-auto" />
-          <h3 className="font-bold text-slate-800 text-base">No Projects Found</h3>
-          <p className="text-xs text-slate-500 max-w-md mx-auto">
+        <div className="space-y-3 rounded-3xl border border-dashed border-[#E4E7E2] bg-white p-12 text-center">
+          <Hammer className="mx-auto h-8 w-8 text-[#287A5B]" />
+          <h3 className="text-base font-bold text-[#18201C]">No projects found</h3>
+          <p className="mx-auto max-w-md text-xs text-[#69736D]">
             Try adjusting your search query or propose a new project brief using the button above.
           </p>
         </div>
@@ -308,53 +303,37 @@ export default function BuildPage() {
           {filteredProjects.map((proj) => (
             <div
               key={proj._id}
-              className="bg-slate-50 hover:bg-white rounded-3xl p-5 border border-slate-200/80 shadow-soft hover:shadow-lg transition-all flex flex-col justify-between group"
+              className="group flex flex-col justify-between overflow-hidden rounded-[22px] border border-[#E4E7E2] bg-white transition hover:-translate-y-0.5 hover:border-[#287A5B]/45 hover:shadow-[0_10px_26px_rgba(24,32,28,.07)]"
             >
               <div className="space-y-4">
-                {/* Cover Image */}
-                {proj.coverImage && (
-                  <div className="relative w-full h-36 rounded-2xl overflow-hidden mb-3">
-                    <Image
-                      src={proj.coverImage}
-                      alt={proj.title}
-                      fill
-                      className="object-cover group-hover:scale-105 transition-transform duration-300"
-                      unoptimized
-                    />
+                <MediaImage src={proj.coverImage} alt={proj.title} kind="build" className="h-40" />
+                <div className="px-5 space-y-4">
                     {proj.isAptivoVerified && (
                       <span className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-emerald-950/80 backdrop-blur-md text-emerald-300 border border-emerald-500/40 text-[10px] font-bold flex items-center gap-1 shadow-sm">
                         <CheckCircle2 className="w-3 h-3 text-emerald-400" />
                         Aptivo Verified
                       </span>
                     )}
-                  </div>
-                )}
-
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-[#287A5B]">
                     {proj.field}
                   </span>
                   <StatusPill status={proj.status} size="sm" />
                 </div>
 
                 <div>
-                  <h4 className="font-extrabold text-slate-900 text-base leading-snug">
+                  <h4 className="text-base font-extrabold leading-snug text-[#18201C]">
                     {proj.title}
                   </h4>
-                  <p className="text-xs text-slate-600 mt-2 line-clamp-2">
-                    <strong className="text-slate-900 font-semibold">Problem:</strong> {proj.problem}
-                  </p>
-                  <p className="text-xs text-slate-600 mt-1 line-clamp-2">
-                    <strong className="text-slate-900 font-semibold">Building:</strong> {proj.building}
-                  </p>
-                </div>
+                  <p className="mt-2 line-clamp-1 text-xs text-[#69736D]">{proj.building || proj.problem}</p>
+                </div></div>
 
                 {/* Skills Tags */}
                 <div className="flex flex-wrap gap-1.5 pt-1">
                   {proj.requiredSkills.map((sk) => (
                     <span
                       key={sk}
-                      className="px-2 py-0.5 rounded-lg bg-slate-200/80 text-slate-800 text-[10px] font-medium"
+                      className="rounded-full bg-[#E4EEE8] px-2.5 py-1 text-[10px] font-medium text-[#174D3A]"
                     >
                       {sk}
                     </span>
@@ -362,8 +341,8 @@ export default function BuildPage() {
                 </div>
               </div>
 
-              <div className="pt-4 mt-4 border-t border-slate-200/60 space-y-3">
-                <div className="flex items-center justify-between text-[11px] text-slate-500">
+              <div className="mx-5 mt-4 space-y-3 border-t border-[#E4E7E2] pt-4">
+                <div className="flex items-center justify-between text-[11px] text-[#69736D]">
                   <span className="flex items-center gap-1">
                     <Users className="w-3.5 h-3.5 text-slate-400" />
                     {proj.members?.length || 1}/{proj.teamSize} Team Seats
@@ -373,7 +352,7 @@ export default function BuildPage() {
 
                 <button
                   onClick={() => setApplyModalProject(proj)}
-                  className="w-full py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold transition-all shadow-sm"
+                  className="w-full rounded-xl bg-[#E86F51] py-2.5 text-xs font-bold text-white transition hover:bg-[#cf5e43]"
                 >
                   Apply to Join Team
                 </button>

@@ -3,6 +3,7 @@ import connectToDatabase from '@/lib/db';
 import Project from '@/lib/models/Project';
 import User from '@/lib/models/User';
 import Notification from '@/lib/models/Notification';
+import { authError, requireAdmin, requireUser } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,20 +18,26 @@ export async function GET(req: Request) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const query: any = {};
     if (field && field !== 'All') query.field = new RegExp(field, 'i');
-    if (status && status !== 'All') query.status = status;
+    if (status?.toLowerCase() === 'all') {
+      await requireAdmin();
+    } else if (status) {
+      if (!['Approved', 'Active', 'Showcase'].includes(status)) await requireAdmin();
+      query.status = status;
+    } else {
+      query.status = { $in: ['Approved', 'Active', 'Showcase'] };
+    }
     if (showcaseOnly) query.status = 'Showcase';
 
     const projects = await Project.find(query).sort({ createdAt: -1 });
     return NextResponse.json({ projects });
   } catch (error: unknown) {
-    const err = error as Error;
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    const auth = authError(error); return NextResponse.json(auth || { error: (error as Error).message }, { status: auth?.status || 500 });
   }
 }
 
 export async function POST(req: Request) {
   try {
-    await connectToDatabase();
+    const student = await requireUser(); await connectToDatabase();
     const body = await req.json();
 
     if (!body.title || !body.problem || !body.building) {
@@ -40,17 +47,6 @@ export async function POST(req: Request) {
       );
     }
 
-    if (!body.ownerEmail) {
-      return NextResponse.json(
-        { error: 'Authentication required: Please sign in to submit a project proposal.' },
-        { status: 401 }
-      );
-    }
-
-    const student = await User.findOne({ email: body.ownerEmail.trim().toLowerCase() });
-    if (!student) {
-      return NextResponse.json({ error: 'User account not found.' }, { status: 404 });
-    }
 
     const newProject = await Project.create({
       title: body.title,
@@ -113,14 +109,13 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, project: newProject }, { status: 201 });
   } catch (error: unknown) {
-    const err = error as Error;
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    const auth = authError(error); return NextResponse.json(auth || { error: (error as Error).message }, { status: auth?.status || 500 });
   }
 }
 
 export async function PATCH(req: Request) {
   try {
-    await connectToDatabase();
+    const actor = await requireUser(); await connectToDatabase();
     const body = await req.json();
     const { id, status, isAptivoVerified, showcase, milestones } = body;
 
@@ -129,10 +124,14 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
 
-    if (status) project.status = status;
-    if (isAptivoVerified !== undefined) project.isAptivoVerified = isAptivoVerified;
-    if (milestones) project.milestones = milestones;
+    if (status) {
+      if (actor.role !== 'admin') return NextResponse.json({ error: 'Only an administrator can change project publication status.' }, { status: 403 });
+      project.status = status;
+    }
+    if (isAptivoVerified !== undefined) { if (actor.role !== 'admin') return NextResponse.json({ error: 'Only an administrator can verify a project.' }, { status: 403 }); project.isAptivoVerified = isAptivoVerified; }
+    if (milestones) { if (project.ownerId.toString() !== actor._id.toString() && actor.role !== 'admin') return NextResponse.json({ error: 'Only the project owner can update milestones.' }, { status: 403 }); project.milestones = milestones; }
     if (showcase) {
+      if (project.ownerId.toString() !== actor._id.toString() && actor.role !== 'admin') return NextResponse.json({ error: 'Only the project owner can submit a showcase.' }, { status: 403 });
       project.showcase = {
         ...project.showcase,
         ...showcase,
@@ -157,7 +156,6 @@ export async function PATCH(req: Request) {
 
     return NextResponse.json({ success: true, project });
   } catch (error: unknown) {
-    const err = error as Error;
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    const auth = authError(error); return NextResponse.json(auth || { error: (error as Error).message }, { status: auth?.status || 500 });
   }
 }

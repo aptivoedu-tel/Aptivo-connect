@@ -3,18 +3,20 @@ import connectToDatabase from '@/lib/db';
 import User from '@/lib/models/User';
 import Project from '@/lib/models/Project';
 import Notification from '@/lib/models/Notification';
+import { authError, requireUser } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
   try {
+    const actor = await requireUser();
     await connectToDatabase();
     const body = await req.json();
-    const { projectId, reviewerEmail, targetUserId, category, comment } = body;
+    const { projectId, targetUserId, category, comment } = body;
 
-    if (!projectId || !reviewerEmail || !targetUserId || !category) {
+    if (!projectId || !targetUserId || !category) {
       return NextResponse.json(
-        { error: 'Project ID, reviewer email, target user, and category are required.' },
+        { error: 'Project ID, target user, and category are required.' },
         { status: 400 }
       );
     }
@@ -30,10 +32,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid reputation category.' }, { status: 400 });
     }
 
-    const reviewer = await User.findOne({ email: reviewerEmail.trim().toLowerCase() });
-    if (!reviewer) {
-      return NextResponse.json({ error: 'Reviewer account not found.' }, { status: 401 });
-    }
+    const reviewer = actor;
 
     if (reviewer._id.toString() === targetUserId.toString()) {
       return NextResponse.json({ error: 'You cannot provide reputation feedback to yourself.' }, { status: 400 });
@@ -100,8 +99,5 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json({ success: true, message: 'Peer endorsement recorded.' });
-  } catch (error: unknown) {
-    const err = error as Error;
-    return NextResponse.json({ error: err.message }, { status: 500 });
-  }
+  } catch (error: unknown) { const auth = authError(error); return NextResponse.json(auth || { error: (error as Error).message }, { status: auth?.status || 500 }); }
 }

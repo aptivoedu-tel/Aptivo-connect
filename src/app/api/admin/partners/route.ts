@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/db';
 import Partner from '@/lib/models/Partner';
+import { authError, requireAdmin } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
 // INTERNAL ADMIN-ONLY — Partners are managed by Aptivo team, not self-service
 export async function GET(req: Request) {
   try {
+    await requireAdmin();
     await connectToDatabase();
     const { searchParams } = new URL(req.url);
     const type = searchParams.get('type');
@@ -19,15 +21,13 @@ export async function GET(req: Request) {
 
     const partners = await Partner.find(query).sort({ createdAt: -1 });
     return NextResponse.json({ partners });
-  } catch (error: unknown) {
-    const err = error as Error;
-    return NextResponse.json({ error: err.message }, { status: 500 });
-  }
+  } catch (error: unknown) { const auth = authError(error); return NextResponse.json(auth || { error: (error as Error).message }, { status: auth?.status || 500 }); }
 }
 
 // Admin creates a partner CRM record (no self-registration)
 export async function POST(req: Request) {
   try {
+    await requireAdmin();
     await connectToDatabase();
     const body = await req.json();
 
@@ -53,15 +53,13 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json({ success: true, partner }, { status: 201 });
-  } catch (error: unknown) {
-    const err = error as Error;
-    return NextResponse.json({ error: err.message }, { status: 500 });
-  }
+  } catch (error: unknown) { const auth = authError(error); return NextResponse.json(auth || { error: (error as Error).message }, { status: auth?.status || 500 }); }
 }
 
 // Admin updates a partner record
 export async function PATCH(req: Request) {
   try {
+    await requireAdmin();
     await connectToDatabase();
     const body = await req.json();
     const { partnerId, ...updates } = body;
@@ -76,8 +74,5 @@ export async function PATCH(req: Request) {
     }
 
     return NextResponse.json({ success: true, partner });
-  } catch (error: unknown) {
-    const err = error as Error;
-    return NextResponse.json({ error: err.message }, { status: 500 });
-  }
+  } catch (error: unknown) { const auth = authError(error); return NextResponse.json(auth || { error: (error as Error).message }, { status: auth?.status || 500 }); }
 }

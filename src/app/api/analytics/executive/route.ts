@@ -8,11 +8,13 @@ import Experience from '@/lib/models/Experience';
 
 import Partner from '@/lib/models/Partner';
 import CampusDemand from '@/lib/models/CampusDemand';
+import { authError, requireAdmin } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
+    await requireAdmin();
     await connectToDatabase();
 
     const [
@@ -128,8 +130,5 @@ export async function GET() {
       demands: campusDemands,
       funnels,
     });
-  } catch (error: unknown) {
-    const err = error as Error;
-    return NextResponse.json({ error: err.message }, { status: 500 });
-  }
+  } catch (error: unknown) { const auth = authError(error); return NextResponse.json(auth || { error: (error as Error).message }, { status: auth?.status || 500 }); }
 }

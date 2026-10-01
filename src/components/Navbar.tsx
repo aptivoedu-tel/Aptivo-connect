@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Sparkles, Menu, X, ArrowRight, Award, LogIn, UserPlus, User, ShieldCheck, LogOut } from 'lucide-react';
+import { Sparkles, Menu, X, ArrowRight, LogIn, UserPlus, User, ShieldCheck, LogOut } from 'lucide-react';
 
 export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -18,16 +18,17 @@ export default function Navbar() {
   }, []);
 
   const handleSignOut = () => {
+    fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
     try {
       localStorage.removeItem('aptivo_user');
     } catch {}
     setCurrentUser(null);
-    window.location.href = '/auth/login';
+    window.location.replace('/auth/login');
   };
 
   return (
     <header className="sticky top-0 z-40 w-full backdrop-blur-md bg-white/80 border-b border-slate-100/80 transition-all">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-[68px] flex items-center justify-between">
         {/* Brand Logo */}
         <Link href="/" className="flex items-center gap-3 group">
           <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-brand-600 to-darkpine-900 flex items-center justify-center text-white shadow-md shadow-brand-500/20 group-hover:scale-105 transition-transform">
@@ -38,8 +39,8 @@ export default function Navbar() {
               <span className="font-extrabold text-xl tracking-tight text-slate-900">Aptivo</span>
               <span className="font-semibold text-xl tracking-tight text-brand-600">Connect</span>
             </div>
-            <p className="text-[10px] uppercase font-bold tracking-widest text-slate-400">
-              Meetup • Build • Experience • Showcase
+            <p className="hidden text-[10px] font-medium text-slate-500 sm:block">
+              Meet · Build · Experience
             </p>
           </div>
         </Link>
@@ -47,11 +48,7 @@ export default function Navbar() {
         {/* Desktop Nav Links */}
         <nav className="hidden md:flex items-center gap-7 text-sm font-medium text-slate-600">
           <Link href="/#pillars" className="hover:text-brand-600 transition-colors">
-            The 4 Pillars
-          </Link>
-          <Link href="/showcase" className="hover:text-brand-600 transition-colors flex items-center gap-1">
-            <Award className="w-4 h-4 text-emerald-600" />
-            <span>Showcase</span>
+            Explore
           </Link>
           <Link href="/#how-it-works" className="hover:text-brand-600 transition-colors">
             How It Works
@@ -128,14 +125,14 @@ export default function Navbar() {
             onClick={() => setMobileMenuOpen(false)}
             className="block text-base font-medium text-slate-700 hover:text-brand-600"
           >
-            The 4 Pillars
+            Explore Connect
           </Link>
           <Link
             href="/showcase"
             onClick={() => setMobileMenuOpen(false)}
             className="block text-base font-medium text-slate-700 hover:text-brand-600"
           >
-            Verified Project Showcase
+            Meet, Build & Experience
           </Link>
           <Link
             href="/#how-it-works"

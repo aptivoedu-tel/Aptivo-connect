@@ -10,8 +10,9 @@ import {
   Send,
   Building,
   Info,
+  Search,
 } from 'lucide-react';
-import Image from 'next/image';
+import MediaImage from '@/components/MediaImage';
 import StatusPill from '@/components/StatusPill';
 
 interface IEnrolled {
@@ -36,16 +37,19 @@ interface IExperience {
   image: string;
   status: string;
   enrolledStudents: IEnrolled[];
+  questionnaire?: Array<{ id: string; questionText: string; questionType: 'short-text' | 'long-text' | 'single-choice' | 'multiple-choice'; required: boolean; options?: string[] }>;
 }
 
 export default function ExperiencePage() {
   const [experiences, setExperiences] = useState<IExperience[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Enroll Modal
   const [activeExp, setActiveExp] = useState<IExperience | null>(null);
   const [whyAttend, setWhyAttend] = useState('');
+  const [questionAnswers, setQuestionAnswers] = useState<Record<string, string>>({});
   const [enrolling, setEnrolling] = useState(false);
   const [enrolledSuccess, setEnrolledSuccess] = useState(false);
 
@@ -89,8 +93,8 @@ export default function ExperiencePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           experienceId: activeExp._id,
-          studentEmail: email,
           whyAttend,
+          questionResponses: (activeExp.questionnaire || []).map((question) => ({ questionText: question.questionText, answer: questionAnswers[question.id] || '' })),
         }),
       });
       const data = await res.json();
@@ -100,6 +104,7 @@ export default function ExperiencePage() {
           setEnrolledSuccess(false);
           setActiveExp(null);
           setWhyAttend('');
+          setQuestionAnswers({});
           fetchExperiences();
         }, 1800);
       } else {
@@ -115,25 +120,19 @@ export default function ExperiencePage() {
   const categories = ['All', 'Software House', 'Research Lab', 'Startup Office'];
 
   const filtered = experiences.filter(
-    (e) => selectedCategory === 'All' || e.category.toLowerCase().includes(selectedCategory.toLowerCase())
+    (e) => (selectedCategory === 'All' || e.category.toLowerCase().includes(selectedCategory.toLowerCase())) && [e.title, e.company, e.category, e.location, e.city].some((value) => value?.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-7xl space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-100">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-100 text-blue-900 text-xs font-bold mb-2">
-            <Building2 className="w-3.5 h-3.5" />
-            <span>Pillar 3: EXPERIENCE</span>
-          </div>
-          <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-            Workplace Visits & Research Lab Immersions
-          </h2>
-          <p className="text-sm text-slate-500 mt-1 max-w-xl">
-            Step beyond textbooks. Experience software houses, hardware research facilities, and startup headquarters firsthand.
-          </p>
+          <p className="text-sm font-medium text-emerald-800">Experience</p>
+          <h2 className="mt-1 text-2xl font-semibold text-slate-950 tracking-tight sm:text-3xl">Step into the work.</h2>
+          <p className="mt-2 text-sm text-slate-500">Visit the places where ideas become real.</p>
         </div>
+        <label className="flex h-11 w-full max-w-sm items-center gap-2 rounded-full bg-white px-4 text-slate-400 ring-1 ring-slate-200 focus-within:ring-2 focus-within:ring-emerald-600"><Search className="h-4 w-4 shrink-0"/><input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search experiences" className="w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"/></label>
       </div>
 
       {/* Category Pills */}
@@ -171,23 +170,14 @@ export default function ExperiencePage() {
             return (
               <div
                 key={exp._id}
-                className="bg-slate-50 hover:bg-white rounded-3xl p-5 border border-slate-200/80 shadow-soft hover:shadow-lg transition-all flex flex-col justify-between group"
+                className="bg-white overflow-hidden rounded-2xl border border-slate-200 hover:border-blue-300 hover:shadow-lg transition-all flex flex-col justify-between group"
               >
                 <div className="space-y-4">
-                  {/* Cover Image */}
-                  <div className="relative w-full h-40 rounded-2xl overflow-hidden mb-3">
-                    <Image
-                      src={exp.image}
-                      alt={exp.title}
-                      fill
-                      className="object-cover group-hover:scale-105 transition-transform duration-300"
-                      unoptimized
-                    />
+                  <MediaImage src={exp.image} alt={exp.title} kind="experience" className="h-40" />
+                  <div className="px-5 space-y-4">
                     <span className="absolute top-3 left-3 px-3 py-1 rounded-full bg-slate-900/80 backdrop-blur-md text-white text-[10px] font-bold">
                       {exp.category}
                     </span>
-                  </div>
-
                   <div>
                     <span className="text-xs font-bold text-brand-700 uppercase tracking-wide">
                       {exp.company}
@@ -195,10 +185,8 @@ export default function ExperiencePage() {
                     <h4 className="font-extrabold text-slate-900 text-base mt-1 leading-snug">
                       {exp.title}
                     </h4>
-                    <p className="text-xs text-slate-600 mt-2 line-clamp-2 leading-relaxed">
-                      {exp.description}
-                    </p>
-                  </div>
+                    <p className="text-xs text-slate-600 mt-2 line-clamp-1">{exp.description}</p>
+                  </div></div>
 
                   {/* Info Badges */}
                   <div className="space-y-2 text-xs text-slate-500 bg-white p-3.5 rounded-2xl border border-slate-100">
@@ -217,7 +205,7 @@ export default function ExperiencePage() {
                   </div>
                 </div>
 
-                <div className="pt-4 mt-4 border-t border-slate-200/60">
+                <div className="mx-5 pt-4 mt-4 border-t border-slate-200/60">
                   <button
                     onClick={() => setActiveExp(exp)}
                     className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-brand-600 text-white text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1.5"
@@ -286,6 +274,13 @@ export default function ExperiencePage() {
                     />
                   </div>
 
+                  {(activeExp.questionnaire || []).map((question) => (
+                    <div key={question.id}>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">{question.questionText} {question.required ? '*' : ''}</label>
+                      {question.questionType === 'long-text' ? <textarea required={question.required} rows={3} value={questionAnswers[question.id] || ''} onChange={(e) => setQuestionAnswers((a) => ({ ...a, [question.id]: e.target.value }))} className="w-full p-3 rounded-xl border border-slate-200 text-sm" /> : question.questionType === 'single-choice' ? <select required={question.required} value={questionAnswers[question.id] || ''} onChange={(e) => setQuestionAnswers((a) => ({ ...a, [question.id]: e.target.value }))} className="w-full min-h-11 p-3 rounded-xl border border-slate-200 text-sm"><option value="">Select an option</option>{(question.options || []).map((option) => <option key={option} value={option}>{option}</option>)}</select> : <input required={question.required} value={questionAnswers[question.id] || ''} onChange={(e) => setQuestionAnswers((a) => ({ ...a, [question.id]: e.target.value }))} className="w-full min-h-11 p-3 rounded-xl border border-slate-200 text-sm" />}
+                    </div>
+                  ))}
+
                   <div className="pt-4 flex justify-end gap-3">
                     <button
                       type="button"
@@ -300,7 +295,7 @@ export default function ExperiencePage() {
                       className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold shadow-md transition-all disabled:opacity-50"
                     >
                       <Send className="w-4 h-4" />
-                      <span>{enrolling ? 'Submitting...' : 'Submit Application'}</span>
+                      <span>{enrolling ? 'Submitting...' : 'Register'}</span>
                     </button>
                   </div>
                 </form>

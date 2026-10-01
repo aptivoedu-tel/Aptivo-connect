@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/db';
 import Experience from '@/lib/models/Experience';
+import { authError, requireAdmin } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,20 +14,19 @@ export async function GET(req: Request) {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const query: any = {};
-    if (category && category !== 'All') query.category = category;
-    if (city && city !== 'All') query.city = city;
+    if (category && category.toLowerCase() !== 'all') query.category = category;
+    if (city && city.toLowerCase() !== 'all') query.city = city;
 
     const experiences = await Experience.find(query).sort({ date: 1 });
     return NextResponse.json({ experiences });
   } catch (error: unknown) {
-    const err = error as Error;
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    const auth = authError(error); return NextResponse.json(auth || { error: (error as Error).message }, { status: auth?.status || 500 });
   }
 }
 
 export async function POST(req: Request) {
   try {
-    await connectToDatabase();
+    await requireAdmin(); await connectToDatabase();
     const body = await req.json();
 
     const newExperience = await Experience.create({
@@ -54,14 +54,13 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, experience: newExperience }, { status: 201 });
   } catch (error: unknown) {
-    const err = error as Error;
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    const auth = authError(error); return NextResponse.json(auth || { error: (error as Error).message }, { status: auth?.status || 500 });
   }
 }
 
 export async function PATCH(req: Request) {
   try {
-    await connectToDatabase();
+    await requireAdmin(); await connectToDatabase();
     const body = await req.json();
     const { id, ...updates } = body;
 
@@ -77,14 +76,13 @@ export async function PATCH(req: Request) {
 
     return NextResponse.json({ success: true, experience: exp });
   } catch (error: unknown) {
-    const err = error as Error;
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    const auth = authError(error); return NextResponse.json(auth || { error: (error as Error).message }, { status: auth?.status || 500 });
   }
 }
 
 export async function DELETE(req: Request) {
   try {
-    await connectToDatabase();
+    await requireAdmin(); await connectToDatabase();
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
 
@@ -95,7 +93,6 @@ export async function DELETE(req: Request) {
     await Experience.findByIdAndDelete(id);
     return NextResponse.json({ success: true });
   } catch (error: unknown) {
-    const err = error as Error;
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    const auth = authError(error); return NextResponse.json(auth || { error: (error as Error).message }, { status: auth?.status || 500 });
   }
 }

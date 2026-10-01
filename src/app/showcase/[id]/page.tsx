@@ -2,9 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
+import MediaImage from '@/components/MediaImage';
+import BackButton from '@/components/BackButton';
 import {
   Award,
   ArrowLeft,
@@ -66,28 +65,19 @@ export default function SingleShowcasePage({ params }: { params: { id: string } 
 
   if (loading || !project) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC] flex flex-col">
-        <Navbar />
+      <div className="w-full bg-[#f7f9f8]">
         <div className="py-20 text-center text-slate-400 text-sm flex-1">Loading showcase...</div>
-        <Footer />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col font-sans">
-      <Navbar />
+    <div className="w-full bg-[#f7f9f8] font-sans">
 
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex-1 space-y-8 w-full">
+      <div className="mx-auto w-full max-w-5xl flex-1 space-y-8 px-1 py-3 sm:px-4">
         {/* Back Link */}
         <div>
-          <Link
-            href="/showcase"
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-900"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Back to All Showcase Projects</span>
-          </Link>
+          <BackButton fallback="/showcase">Back to Showcase</BackButton>
         </div>
 
         {/* Hero Showcase Card */}
@@ -139,17 +129,7 @@ export default function SingleShowcasePage({ params }: { params: { id: string } 
           </div>
 
           {/* Cover Media */}
-          {project.coverImage && (
-            <div className="relative w-full h-72 sm:h-96 rounded-3xl overflow-hidden shadow-lg border border-slate-100">
-              <Image
-                src={project.coverImage}
-                alt={project.title}
-                fill
-                className="object-cover"
-                unoptimized
-              />
-            </div>
-          )}
+          <MediaImage src={project.coverImage} alt={project.title} kind="build" className="h-72 sm:h-96 w-full rounded-3xl shadow-lg border border-slate-100" />
 
           {/* Impact Outcome Callout */}
           {project.showcase?.outcomes && (
@@ -219,9 +199,8 @@ export default function SingleShowcasePage({ params }: { params: { id: string } 
             </div>
           </div>
         </div>
-      </main>
+      </div>
 
-      <Footer />
     </div>
   );
 }

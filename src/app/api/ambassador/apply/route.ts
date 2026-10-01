@@ -3,20 +3,16 @@ import connectToDatabase from '@/lib/db';
 import AmbassadorApplication from '@/lib/models/AmbassadorApplication';
 import User from '@/lib/models/User';
 import Notification from '@/lib/models/Notification';
+import { authError, requireUser } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
 // Submit a new ambassador application
 export async function POST(req: Request) {
   try {
-    await connectToDatabase();
+    const user = await requireUser(); await connectToDatabase();
     const body = await req.json();
-    const { userEmail, ...rest } = body;
-
-    const user = await User.findOne({ email: userEmail });
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
+    const { userEmail: _ignoredUserEmail, ...rest } = body;
 
     // One application per user
     const existing = await AmbassadorApplication.findOne({ userId: user._id });
@@ -53,31 +49,18 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, application }, { status: 201 });
   } catch (error: unknown) {
-    const err = error as Error;
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    const auth = authError(error); return NextResponse.json(auth || { error: (error as Error).message }, { status: auth?.status || 500 });
   }
 }
 
 // Check a specific user's application status
 export async function GET(req: Request) {
   try {
-    await connectToDatabase();
-    const { searchParams } = new URL(req.url);
-    const userEmail = searchParams.get('userEmail');
-
-    if (!userEmail) {
-      return NextResponse.json({ error: 'userEmail required' }, { status: 400 });
-    }
-
-    const user = await User.findOne({ email: userEmail });
-    if (!user) {
-      return NextResponse.json({ application: null });
-    }
+    const user = await requireUser(); await connectToDatabase();
 
     const application = await AmbassadorApplication.findOne({ userId: user._id });
     return NextResponse.json({ application });
   } catch (error: unknown) {
-    const err = error as Error;
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    const auth = authError(error); return NextResponse.json(auth || { error: (error as Error).message }, { status: auth?.status || 500 });
   }
 }

@@ -34,16 +34,16 @@ export default function Sidebar() {
   }, []);
 
   const navItems = [
-    { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-    { name: 'BUILD', href: '/dashboard/build', icon: Hammer, badge: 'Teams' },
-    { name: 'MEETUP', href: '/dashboard/meetup', icon: Users, badge: 'Events' },
-    { name: 'EXPERIENCE', href: '/dashboard/experience', icon: Building2, badge: 'Visits' },
-    { name: 'Showcase', href: '/showcase', icon: Award, badge: 'Verified' },
-    { name: 'People', href: '/dashboard/people', icon: Compass, badge: 'Discover' },
-    { name: 'Links', href: '/dashboard/links', icon: Link2 },
-    { name: 'Messages', href: '/dashboard/messages', icon: MessageSquare },
-    { name: 'Ambassador Program', href: '/dashboard/ambassador', icon: Radio, badge: 'Apply' },
+    { name: 'Home', href: '/dashboard', icon: LayoutDashboard },
+    { name: 'Meet', href: '/dashboard/meetup', icon: Users, badge: 'Events' },
+    { name: 'Build', href: '/dashboard/build', icon: Hammer, badge: 'Teams' },
+    { name: 'Experience', href: '/dashboard/experience', icon: Building2, badge: 'Visits' },
+    { name: 'Campus', href: '/dashboard/campus', icon: Building2, badge: 'Discover' },
+    { name: 'Connections', href: '/dashboard/people', icon: Compass, badge: 'Discover' },
+    { name: 'Chats', href: '/dashboard/messages', icon: MessageSquare },
     { name: 'Profile', href: '/dashboard/profile', icon: User },
+    { name: 'Showcase', href: '/showcase', icon: Award, badge: 'Builds' },
+    { name: 'Ambassador', href: '/dashboard/ambassador', icon: Radio, badge: 'Apply' },
   ];
 
   return (
@@ -117,10 +117,11 @@ export default function Sidebar() {
         )}
         <button
           onClick={() => {
+            fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
             try {
               localStorage.removeItem('aptivo_user');
             } catch {}
-            window.location.href = '/auth/login';
+            window.location.replace('/auth/login');
           }}
           className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-xs text-emerald-400/80 hover:text-white transition-colors text-left"
         >

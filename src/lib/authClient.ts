@@ -13,6 +13,8 @@ export interface CurrentUser {
 }
 
 export function getCurrentUser(): CurrentUser | null {
+  // Compatibility-only UI cache. Never use this value for access control;
+  // protected APIs resolve identity from the signed HttpOnly session cookie.
   if (typeof window === 'undefined') return null;
   try {
     const raw = localStorage.getItem('aptivo_user');
@@ -21,6 +23,15 @@ export function getCurrentUser(): CurrentUser | null {
   } catch {
     return null;
   }
+}
+
+export async function getSessionUser(): Promise<CurrentUser | null> {
+  try {
+    const response = await fetch('/api/auth/me', { cache: 'no-store' });
+    if (!response.ok) return null;
+    const data = await response.json();
+    return data.user || null;
+  } catch { return null; }
 }
 
 export function setCurrentUser(user: any) {

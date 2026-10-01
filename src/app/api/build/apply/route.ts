@@ -2,34 +2,37 @@ import { NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/db';
 import ProjectApplication from '@/lib/models/ProjectApplication';
 import Project from '@/lib/models/Project';
-import User from '@/lib/models/User';
 import Notification from '@/lib/models/Notification';
+import { authError, requireUser } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
   try {
-    await connectToDatabase();
+    const applicant = await requireUser(); await connectToDatabase();
     const { searchParams } = new URL(req.url);
     const projectId = searchParams.get('projectId');
-    const applicantEmail = searchParams.get('applicantEmail');
-
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const query: any = {};
-    if (projectId) query.projectId = projectId;
-    if (applicantEmail) query.applicantEmail = applicantEmail;
+    const query: any = { applicantId: applicant._id };
+    if (projectId) {
+      const project = await Project.findById(projectId);
+      if (!project) return NextResponse.json({ applications: [] });
+      query.projectId = project._id;
+      if (project.ownerId?.toString() === applicant._id.toString() || applicant.role === 'admin') {
+        delete query.applicantId;
+      }
+    }
 
     const applications = await ProjectApplication.find(query).sort({ createdAt: -1 });
     return NextResponse.json({ applications });
   } catch (error: unknown) {
-    const err = error as Error;
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    const auth = authError(error); return NextResponse.json(auth || { error: (error as Error).message }, { status: auth?.status || 500 });
   }
 }
 
 export async function POST(req: Request) {
   try {
-    await connectToDatabase();
+    const applicant = await requireUser(); await connectToDatabase();
     const body = await req.json();
 
     if (!body.projectId) {
@@ -41,14 +44,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
 
-    if (!body.applicantEmail) {
-      return NextResponse.json({ error: 'Authentication required. Please sign in to apply.' }, { status: 401 });
-    }
-
-    const applicant = await User.findOne({ email: body.applicantEmail.trim().toLowerCase() });
-    if (!applicant) {
-      return NextResponse.json({ error: 'User account not found.' }, { status: 404 });
-    }
 
     // Check duplicate application
     const existing = await ProjectApplication.findOne({
@@ -88,14 +83,13 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, application }, { status: 201 });
   } catch (error: unknown) {
-    const err = error as Error;
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    const auth = authError(error); return NextResponse.json(auth || { error: (error as Error).message }, { status: auth?.status || 500 });
   }
 }
 
 export async function PATCH(req: Request) {
   try {
-    await connectToDatabase();
+    const actor = await requireUser(); await connectToDatabase();
     const body = await req.json();
     const { applicationId, status } = body;
 
@@ -104,12 +98,14 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: 'Application not found' }, { status: 404 });
     }
 
+    const projectForDecision = await Project.findById(application.projectId);
+    if (!projectForDecision || (projectForDecision.ownerId.toString() !== actor._id.toString() && actor.role !== 'admin')) return NextResponse.json({ error: 'Only the project owner can review applications.' }, { status: 403 });
     application.status = status;
     await application.save();
 
     if (status === 'Accepted') {
       // Add member to project
-      const project = await Project.findById(application.projectId);
+      const project = projectForDecision;
       if (project) {
         const isAlreadyMember = project.members.some(
           (m) => m.userId?.toString() === application.applicantId?.toString()
@@ -140,7 +136,6 @@ export async function PATCH(req: Request) {
 
     return NextResponse.json({ success: true, application });
   } catch (error: unknown) {
-    const err = error as Error;
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    const auth = authError(error); return NextResponse.json(auth || { error: (error as Error).message }, { status: auth?.status || 500 });
   }
 }
