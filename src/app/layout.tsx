@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { DM_Serif_Display, Manrope } from 'next/font/google';
+import NativeBridge from '@/components/NativeBridge';
 import './globals.css';
 
 const dmSerifDisplay = DM_Serif_Display({
@@ -30,6 +31,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${dmSerifDisplay.variable} ${manrope.variable} h-full`}>
       <body className="min-h-screen flex flex-col font-sans antialiased text-[#18201C] bg-[#F7F6F1]">
+        <NativeBridge />
         {children}
       </body>
     </html>

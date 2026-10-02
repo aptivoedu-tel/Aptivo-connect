@@ -76,6 +76,18 @@ export class NotificationEngine {
       await publishUserEvent(payload.userId, 'notification.created', notificationDoc.toObject());
     } catch {}
 
+    // Native delivery is deliberately best-effort. The persisted notification
+    // and Ably event above remain the source of truth when a provider is down.
+    void import('./pushService').then(({ PushService }) => PushService.dispatch({
+      notificationId: String(notificationDoc._id),
+      userId: String(payload.userId),
+      title: payload.title,
+      message: payload.message,
+      route: payload.link?.startsWith('/') ? payload.link : '/dashboard/notifications',
+      type: payload.type || 'system',
+      conversationId: payload.conversationId ? String(payload.conversationId) : undefined,
+    })).catch(() => {});
+
     // 2. Multi-Channel WhatsApp Template Formatter
     const whatsAppPreview = `*Aptivo Connect Alert*\n\n${payload.title}\n\n${payload.message}\n${
       payload.details

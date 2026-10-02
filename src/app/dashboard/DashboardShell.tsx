@@ -67,6 +67,12 @@ export default function DashboardShell({ children, user }: { children: React.Rea
   }, [pathname]);
 
   useEffect(() => {
+    // The native shell requests push permission only after the web session has
+    // been established. This carries no identity data across the bridge.
+    window.ReactNativeWebView?.postMessage(JSON.stringify({ type: 'USER_AUTHENTICATED' }));
+  }, []);
+
+  useEffect(() => {
     document.body.style.overflow = menuOpen ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
   }, [menuOpen]);
@@ -143,7 +149,8 @@ export default function DashboardShell({ children, user }: { children: React.Rea
     }
   }, [user.id]);
 
-  const signOut = () => {
+  const signOut = async () => {
+    await window.prepareAptivoNativeLogout?.().catch(() => {});
     fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
     try { localStorage.removeItem('aptivo_user'); } catch {}
     window.location.replace('/auth/login');

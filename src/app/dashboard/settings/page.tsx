@@ -66,7 +66,8 @@ export default function SettingsPage() {
     }
   };
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
+    await window.prepareAptivoNativeLogout?.().catch(() => {});
     fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
     try { localStorage.removeItem('aptivo_user'); } catch {}
     window.location.replace('/auth/login');
