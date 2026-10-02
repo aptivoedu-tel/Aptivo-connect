@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import Ably from 'ably';
@@ -45,6 +45,22 @@ export default function DashboardShell({ children, user }: { children: React.Rea
   const [profileOpen, setProfileOpen] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState(user.avatarUrl);
   const [pendingCount, setPendingCount] = useState(0);
+
+  const profileRef = useRef<HTMLDivElement>(null);
+  const networkRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
+        setProfileOpen(false);
+      }
+      if (networkRef.current && !networkRef.current.contains(event.target as Node)) {
+        setNetworkOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     setMenuOpen(false);
@@ -230,9 +246,8 @@ export default function DashboardShell({ children, user }: { children: React.Rea
 
               {/* Network ▾ Dropdown (REQUIREMENTS 7-10) */}
               <div
+                ref={networkRef}
                 className="relative h-full flex items-center"
-                onMouseEnter={() => setNetworkOpen(true)}
-                onMouseLeave={() => setNetworkOpen(false)}
               >
                 <button
                   onClick={() => setNetworkOpen(!networkOpen)}
@@ -329,7 +344,7 @@ export default function DashboardShell({ children, user }: { children: React.Rea
             <NotificationDropdown />
 
             {/* Avatar Dropdown Trigger */}
-            <div className="relative flex items-center" onMouseLeave={() => setProfileOpen(false)}>
+            <div ref={profileRef} className="relative flex items-center">
               <button
                 onClick={() => setProfileOpen(!profileOpen)}
                 className="ml-1 flex items-center shrink-0 rounded-full transition-transform hover:scale-105 focus:outline-none"
