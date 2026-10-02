@@ -224,6 +224,7 @@ function SettingsTab({ onRefresh: _onRefresh }: { onRefresh: () => void }) {
 
 type AdminTab =
   | 'overview'
+  | 'campus'
   | 'build'
   | 'meetup'
   | 'experience'
@@ -257,6 +258,10 @@ export default function AdminPortal() {
   const [experiences, setExperiences] = useState<any[]>([]);
   const [ambassadorApplications, setAmbassadorApplications] = useState<any[]>([]);
   const [usersList, setUsersList] = useState<any[]>([]);
+  const [campusDemands, setCampusDemands] = useState<any[]>([]);
+  const [campusStatusFilter, setCampusStatusFilter] = useState<'all' | 'Reported' | 'Reviewing' | 'Action Scheduled' | 'Resolved'>('all');
+  const [campusCategoryFilter, setCampusCategoryFilter] = useState<'all' | 'MEET' | 'BUILD' | 'EXPERIENCE' | 'ACCESS'>('all');
+  const [updatingDemandId, setUpdatingDemandId] = useState<string | null>(null);
   const [partners, setPartners] = useState<any[]>([]);
   const [dispatchLogs, setDispatchLogs] = useState<any[]>([]);
   const [userSearchQuery, setUserSearchQuery] = useState('');
@@ -322,13 +327,14 @@ export default function AdminPortal() {
   const loadAllData = async () => {
     setLoading(true);
     try {
-      const [statsRes, projRes, meetRes, expRes, usersRes, ambassadorRes] = await Promise.all([
+      const [statsRes, projRes, meetRes, expRes, usersRes, ambassadorRes, campusDemandRes] = await Promise.all([
         fetch('/api/stats').then((r) => r.json()).catch(() => ({})),
         fetch('/api/build?status=all').then((r) => r.json()).catch(() => ({})),
         fetch('/api/meetups?status=all').then((r) => r.json()).catch(() => ({})),
         fetch('/api/experience').then((r) => r.json()).catch(() => ({})),
         fetch('/api/people?limit=100').then((r) => r.json()).catch(() => ({})),
         fetch('/api/ambassador/applications?status=all').then((r) => r.json()).catch(() => ({})),
+        fetch('/api/admin/campus-demand').then((r) => r.json()).catch(() => ({})),
       ]);
 
       if (statsRes.stats) {
@@ -349,6 +355,7 @@ export default function AdminPortal() {
       if (expRes.experiences) setExperiences(expRes.experiences);
       if (usersRes.users) setUsersList(usersRes.users);
       if (ambassadorRes.applications) setAmbassadorApplications(ambassadorRes.applications);
+      if (campusDemandRes.demands) setCampusDemands(campusDemandRes.demands);
     } catch (e) {
       console.error('Error loading admin data:', e);
     } finally {
@@ -524,8 +531,30 @@ export default function AdminPortal() {
     }
   };
 
+  const handleUpdateCampusDemand = async (demandId: string, status: string, notes?: string) => {
+    setUpdatingDemandId(demandId);
+    try {
+      const res = await fetch('/api/admin/campus-demand', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ demandId, status, actionNotes: notes }),
+      });
+      const d = await res.json();
+      if (d.success) {
+        loadAllData();
+      } else {
+        alert(d.error || 'Failed to update campus demand');
+      }
+    } catch {
+      alert('Error updating campus demand');
+    } finally {
+      setUpdatingDemandId(null);
+    }
+  };
+
   const navTabs = [
     { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+    { id: 'campus', label: 'Campus & Needs', icon: Building, badge: campusDemands.filter((d) => d.status === 'Reported').length || undefined },
     { id: 'build', label: 'BUILD Projects', icon: Hammer, badge: stats.pendingProjectsCount || undefined },
     { id: 'meetup', label: 'MEETUP Sessions', icon: Users },
     { id: 'experience', label: 'EXPERIENCE Labs', icon: Building2 },
@@ -670,6 +699,165 @@ export default function AdminPortal() {
                   <p className="text-2xl font-black">{stats.studentsCount + stats.professionalsCount}</p>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* TAB: CAMPUS & STUDENT NEEDS */}
+          {activeTab === 'campus' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between pb-4 border-b border-slate-100 flex-wrap gap-3">
+                <div>
+                  <h3 className="text-xl font-extrabold text-slate-900">Campus & Student Demands Hub</h3>
+                  <p className="text-xs text-slate-500">
+                    Track student needs submitted by campus leads, monitor active campus networks, and schedule actions.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="px-3 py-1 rounded-xl bg-emerald-50 text-emerald-800 text-xs font-bold border border-emerald-200">
+                    {campusDemands.length} Total Demands
+                  </span>
+                  <span className="px-3 py-1 rounded-xl bg-amber-50 text-amber-800 text-xs font-bold border border-amber-200">
+                    {campusDemands.filter((d) => d.status === 'Reported').length} Pending Action
+                  </span>
+                </div>
+              </div>
+
+              {/* Filters */}
+              <div className="flex flex-wrap items-center gap-3 bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-slate-600">Status:</span>
+                  <select
+                    value={campusStatusFilter}
+                    onChange={(e: any) => setCampusStatusFilter(e.target.value)}
+                    className="px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-medium bg-white text-slate-800 focus:outline-none"
+                  >
+                    <option value="all">All Statuses</option>
+                    <option value="Reported">Reported</option>
+                    <option value="Reviewing">Reviewing</option>
+                    <option value="Action Scheduled">Action Scheduled</option>
+                    <option value="Resolved">Resolved</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-slate-600">Category:</span>
+                  <select
+                    value={campusCategoryFilter}
+                    onChange={(e: any) => setCampusCategoryFilter(e.target.value)}
+                    className="px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-medium bg-white text-slate-800 focus:outline-none"
+                  >
+                    <option value="all">All Categories</option>
+                    <option value="MEET">MEET (Speaker / Session)</option>
+                    <option value="BUILD">BUILD (Project / Mentor)</option>
+                    <option value="EXPERIENCE">EXPERIENCE (Workplace Visit)</option>
+                    <option value="ACCESS">ACCESS (Tools & Opportunities)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Campus Demands List */}
+              {campusDemands.length === 0 ? (
+                <div className="p-12 text-center border-2 border-dashed border-slate-200 rounded-3xl space-y-2">
+                  <Building className="w-10 h-10 text-slate-300 mx-auto" />
+                  <p className="text-sm font-bold text-slate-700">No Campus Demands Reported Yet</p>
+                  <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                    When Campus Ambassadors report student needs (session requests, project mentorship, workplace visits), they will appear here for admin review.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {campusDemands
+                    .filter((d) => (campusStatusFilter === 'all' || d.status === campusStatusFilter) && (campusCategoryFilter === 'all' || d.category === campusCategoryFilter))
+                    .map((demand) => (
+                      <div key={demand._id} className="p-5 rounded-2xl border border-slate-200/80 bg-white hover:border-slate-300 transition-all space-y-3">
+                        <div className="flex items-start justify-between gap-4 flex-wrap">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="px-2.5 py-0.5 rounded-lg bg-emerald-100 text-emerald-900 text-[11px] font-bold">
+                                {demand.university} ({demand.campus})
+                              </span>
+                              <span className="px-2.5 py-0.5 rounded-lg bg-slate-100 text-slate-800 text-[11px] font-bold uppercase tracking-wider">
+                                {demand.category}
+                              </span>
+                              <span className="text-xs text-slate-600 font-medium">
+                                Estimated Impact: <strong className="text-slate-900">{demand.studentCountEstimate || 10} students</strong>
+                              </span>
+                            </div>
+                            <h4 className="text-base font-extrabold text-slate-900">{demand.title}</h4>
+                            <p className="text-xs text-slate-600 leading-relaxed max-w-3xl">{demand.description}</p>
+                          </div>
+
+                          <div className="flex flex-col items-end gap-2 shrink-0">
+                            <span
+                              className={`px-3 py-1 rounded-xl text-xs font-bold border ${
+                                demand.status === 'Resolved'
+                                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                  : demand.status === 'Action Scheduled'
+                                  ? 'bg-blue-50 text-blue-800 border-blue-200'
+                                  : demand.status === 'Reviewing'
+                                  ? 'bg-purple-50 text-purple-800 border-purple-200'
+                                  : 'bg-amber-50 text-amber-800 border-amber-200'
+                              }`}
+                            >
+                              {demand.status}
+                            </span>
+                            <span className="text-[10px] text-slate-500">
+                              By: {demand.ambassadorName || 'Campus Lead'}
+                            </span>
+                          </div>
+                        </div>
+
+                        {demand.actionNotes && (
+                          <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700">
+                            <strong className="text-slate-900">Admin Action Note:</strong> {demand.actionNotes}
+                          </div>
+                        )}
+
+                        <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-3 flex-wrap">
+                          <span className="text-[10px] text-slate-400">
+                            Reported on {new Date(demand.createdAt).toLocaleDateString()}
+                          </span>
+
+                          <div className="flex items-center gap-2">
+                            {demand.status !== 'Reviewing' && (
+                              <button
+                                onClick={() => handleUpdateCampusDemand(demand._id, 'Reviewing')}
+                                disabled={updatingDemandId === demand._id}
+                                className="px-3 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-800 text-xs font-bold transition-colors"
+                              >
+                                Mark Reviewing
+                              </button>
+                            )}
+                            {demand.status !== 'Action Scheduled' && (
+                              <button
+                                onClick={() => {
+                                  const notes = prompt('Enter Action Notes (e.g. Session scheduled for Oct 15):', demand.actionNotes || '');
+                                  if (notes !== null) handleUpdateCampusDemand(demand._id, 'Action Scheduled', notes);
+                                }}
+                                disabled={updatingDemandId === demand._id}
+                                className="px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-800 text-xs font-bold transition-colors"
+                              >
+                                Schedule Action
+                              </button>
+                            )}
+                            {demand.status !== 'Resolved' && (
+                              <button
+                                onClick={() => {
+                                  const notes = prompt('Enter Resolution Summary:', demand.actionNotes || 'Demand resolved and session executed.');
+                                  if (notes !== null) handleUpdateCampusDemand(demand._id, 'Resolved', notes);
+                                }}
+                                disabled={updatingDemandId === demand._id}
+                                className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-colors"
+                              >
+                                Mark Resolved
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              )}
             </div>
           )}
 
