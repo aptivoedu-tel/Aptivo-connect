@@ -27,10 +27,8 @@ export async function POST(req: Request) {
       );
     }
 
-    // Look for user in MongoDB
-    const user = await User.findOne({
-      $or: [{ email: cleanEmail }, { email: cleanEmail.replace('@', '.@') }],
-    });
+    // Look for user in MongoDB by email
+    const user = await User.findOne({ email: cleanEmail });
 
     if (!user) {
       return NextResponse.json(
@@ -52,6 +50,7 @@ export async function POST(req: Request) {
     let isValid = false;
     if (storedPassword.startsWith('$2a$') || storedPassword.startsWith('$2b$')) {
       isValid = await bcrypt.compare(providedPassword, storedPassword);
+      console.log('[LOGIN DEBUG] bcrypt.compare result:', isValid);
     } else {
       // Legacy plaintext — reject and instruct reset
       return NextResponse.json(

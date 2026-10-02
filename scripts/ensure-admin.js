@@ -1,4 +1,4 @@
-﻿const mongoose = require('mongoose');
+const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const fs = require('fs');
 const path = require('path');
@@ -25,8 +25,9 @@ async function run() {
     const userSchema = new mongoose.Schema({}, { strict: false });
     const User = mongoose.models.User || mongoose.model('User', userSchema, 'users');
 
+    const adminPassword = process.env.ADMIN_BOOTSTRAP_PASSWORD || 'ChangeThisNow2026!';
     const salt = await bcrypt.genSalt(10);
-    const passwordHash = await bcrypt.hash('aptivo.co', salt);
+    const passwordHash = await bcrypt.hash(adminPassword, salt);
 
     const adminEmail = 'admin@connect.aptivo';
     let admin = await User.findOne({
