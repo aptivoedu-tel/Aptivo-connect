@@ -116,6 +116,7 @@ export async function PATCH(req: Request) {
     // Student fields
     if (updates.university !== undefined) user.university = updates.university;
     if (updates.campus !== undefined) user.campus = updates.campus;
+    if (updates.campusId !== undefined) user.campusId = updates.campusId || undefined;
     if (updates.degree !== undefined) user.degree = updates.degree;
     if (updates.fieldOfStudy !== undefined) {
       user.fieldOfStudy = updates.fieldOfStudy;

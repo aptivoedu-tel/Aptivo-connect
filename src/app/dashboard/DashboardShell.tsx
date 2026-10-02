@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import Ably from 'ably';
 import {
   Award, Bell, Building2, ChevronDown, Compass, Hammer, Home,
-  LogOut, Menu, MessageCircle, Radio, Search, Settings,
+  LogOut, Menu, MessageCircle, Search, Settings,
   User, Users, X,
 } from 'lucide-react';
 import Avatar from '@/components/Avatar';
@@ -29,9 +29,6 @@ const drawerNetwork = [
   { name: 'Connections', href: '/dashboard/people', icon: Users },
   { name: 'Showcase', href: '/showcase', icon: Award },
 ];
-const drawerPrograms = [
-  { name: 'Ambassador', href: '/dashboard/ambassador', icon: Radio },
-];
 const drawerAccount = [
   { name: 'Profile', href: '/profile', icon: User },
   { name: 'Notifications', href: '/dashboard/notifications', icon: Bell },
@@ -45,6 +42,7 @@ export default function DashboardShell({ children, user }: { children: React.Rea
   const [profileOpen, setProfileOpen] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState(user.avatarUrl);
   const [pendingCount, setPendingCount] = useState(0);
+  const [unreadChatCount, setUnreadChatCount] = useState(0);
 
   const profileRef = useRef<HTMLDivElement>(null);
   const networkRef = useRef<HTMLDivElement>(null);
@@ -99,6 +97,16 @@ export default function DashboardShell({ children, user }: { children: React.Rea
     fetchPendingCount();
   }, [user.email]);
 
+  const fetchUnreadChatCount = async () => {
+    try {
+      const response = await fetch('/api/conversations', { cache: 'no-store' });
+      const data = await response.json();
+      if (response.ok && typeof data.totalUnreadMessages === 'number') setUnreadChatCount(data.totalUnreadMessages);
+    } catch {}
+  };
+
+  useEffect(() => { fetchUnreadChatCount(); }, []);
+
   // Realtime User Channel Subscription
   useEffect(() => {
     if (!user.id) return;
@@ -114,6 +122,13 @@ export default function DashboardShell({ children, user }: { children: React.Rea
         } else if (message.name === 'connection.request.accepted' || message.name === 'connection.request.declined' || message.name === 'connection.request.canceled') {
           setPendingCount((prev) => Math.max(0, prev - 1));
           fetchPendingCount();
+        }
+        if (message.name === 'message.created') {
+          if (typeof message.data?.totalUnreadMessages === 'number') setUnreadChatCount(message.data.totalUnreadMessages);
+          else fetchUnreadChatCount();
+        } else if (message.name === 'conversation.read') {
+          if (typeof message.data?.totalUnreadMessages === 'number') setUnreadChatCount(message.data.totalUnreadMessages);
+          else fetchUnreadChatCount();
         }
       };
 
@@ -180,9 +195,10 @@ export default function DashboardShell({ children, user }: { children: React.Rea
             <Link
               href="/dashboard/messages"
               aria-label="Chats and Messages"
-              className={clsx('grid h-9 w-9 place-items-center rounded-xl transition-colors', isChatsActive ? 'bg-[#E4EEE8] text-[#174D3A]' : 'text-[#69736D] hover:text-[#174D3A] hover:bg-[#E4EEE8]')}
+              className={clsx('relative grid h-9 w-9 place-items-center rounded-xl transition-colors', isChatsActive ? 'bg-[#E4EEE8] text-[#174D3A]' : 'text-[#69736D] hover:text-[#174D3A] hover:bg-[#E4EEE8]')}
             >
               <MessageCircle className="h-[18px] w-[18px]" strokeWidth={isChatsActive ? 2.2 : 1.8} />
+              {unreadChatCount > 0 && <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-[#E86F51] px-1 text-[9px] font-bold text-white ring-2 ring-white">{unreadChatCount > 9 ? '9+' : unreadChatCount}</span>}
             </Link>
             <NotificationDropdown />
             <Link href="/profile" className="ml-1 flex items-center shrink-0" aria-label="My Profile">
@@ -335,9 +351,10 @@ export default function DashboardShell({ children, user }: { children: React.Rea
             <Link
               href="/dashboard/messages"
               aria-label="Chats and Messages"
-              className={clsx('grid h-9 w-9 place-items-center rounded-xl transition-colors', isChatsActive ? 'bg-[#E4EEE8] text-[#174D3A]' : 'text-[#69736D] hover:text-[#174D3A] hover:bg-[#E4EEE8]')}
+              className={clsx('relative grid h-9 w-9 place-items-center rounded-xl transition-colors', isChatsActive ? 'bg-[#E4EEE8] text-[#174D3A]' : 'text-[#69736D] hover:text-[#174D3A] hover:bg-[#E4EEE8]')}
             >
               <MessageCircle className="h-[18px] w-[18px]" strokeWidth={isChatsActive ? 2.2 : 1.8} />
+              {unreadChatCount > 0 && <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-[#E86F51] px-1 text-[9px] font-bold text-white ring-2 ring-white">{unreadChatCount > 9 ? '9+' : unreadChatCount}</span>}
             </Link>
 
             {/* Notifications */}
@@ -465,22 +482,6 @@ export default function DashboardShell({ children, user }: { children: React.Rea
                 </div>
               </div>
 
-              {/* PROGRAMS */}
-              <div className="pt-2 border-t border-[#E4E7E2]">
-                <p className="px-3 pb-1 text-[11px] font-bold tracking-wider text-[#69736D] uppercase font-sans">Programs</p>
-                <div className="space-y-0.5">
-                  {drawerPrograms.map(({ name, href, icon: Icon }) => (
-                    <Link key={href} href={href}
-                      className={clsx('flex min-h-[42px] items-center gap-3 rounded-xl px-3 text-[14px] font-medium font-sans transition-colors',
-                        active(href) ? 'bg-[#E4EEE8] text-[#174D3A]' : 'text-[#18201C] hover:bg-[#F7F6F1]'
-                      )}
-                    >
-                      <Icon className={clsx('h-[18px] w-[18px]', active(href) ? 'text-[#174D3A]' : 'text-[#69736D]')} strokeWidth={active(href) ? 2.2 : 1.8} />
-                      {name}
-                    </Link>
-                  ))}
-                </div>
-              </div>
 
               {/* ACCOUNT */}
               <div className="pt-2 border-t border-[#E4E7E2]">

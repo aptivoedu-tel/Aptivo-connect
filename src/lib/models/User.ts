@@ -40,6 +40,8 @@ export interface IUser extends Document {
   // Student specific fields
   university?: string;
   campus?: string;
+  /** Canonical reference to the admin-managed Campus record. Legacy strings remain for migration/display. */
+  campusId?: mongoose.Types.ObjectId;
   degree?: string;
   fieldOfStudy?: string;
   field?: string;
@@ -119,6 +121,7 @@ const UserSchema: Schema<IUser> = new Schema(
     // Student fields
     university: { type: String },
     campus: { type: String },
+    campusId: { type: Schema.Types.ObjectId, ref: 'Campus', index: true },
     degree: { type: String },
     fieldOfStudy: { type: String },
     field: { type: String },

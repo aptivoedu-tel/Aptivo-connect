@@ -32,7 +32,7 @@ export interface IProject extends Document {
   ownerUniversity?: string;
   members: IProjectMember[];
   milestones: IMilestone[];
-  status: 'Pending' | 'Approved' | 'Active' | 'Completed' | 'Showcase';
+  status: 'Pending' | 'Approved' | 'Active' | 'Completed' | 'Showcase' | 'Hidden' | 'Archived';
   isAptivoVerified: boolean;
   coverImage?: string;
   showcase?: {
@@ -86,7 +86,7 @@ const ProjectSchema: Schema<IProject> = new Schema(
     ],
     status: {
       type: String,
-      enum: ['Pending', 'Approved', 'Active', 'Completed', 'Showcase'],
+      enum: ['Pending', 'Approved', 'Active', 'Completed', 'Showcase', 'Hidden', 'Archived'],
       default: 'Pending',
       index: true,
     },

@@ -38,6 +38,7 @@ interface IConversation {
   lastMessage?: string;
   lastMessageAt?: string;
   lastSenderId?: IParticipant | string;
+  unreadMessages?: number;
 }
 
 interface IMessage {
@@ -48,7 +49,13 @@ interface IMessage {
   content: string;
   isRead: boolean;
   createdAt: string;
+  clientTempId?: string;
+  deliveryState?: 'sending' | 'failed';
+  unreadMessages?: number;
+  totalUnreadMessages?: number;
 }
+
+type TypingUser = { name: string; avatarUrl?: string };
 
 export default function MessagesPage() {
   const router = useRouter();
@@ -64,7 +71,12 @@ export default function MessagesPage() {
 
   const [currentUserId, setCurrentUserId] = useState('');
   const [currentUserEmail, setCurrentUserEmail] = useState('');
+  const [typingUsers, setTypingUsers] = useState<Record<string, TypingUser>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const typingChannelRef = useRef<any>(null);
+  const localTypingActiveRef = useRef(false);
+  const localTypingStopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const remoteTypingTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
   // Initialize and load conversations
   useEffect(() => {
@@ -150,6 +162,7 @@ export default function MessagesPage() {
       const data = await res.json();
       if (data.messages) {
         setMessages(data.messages);
+        setConversations((previous) => previous.map((item) => item._id === conv._id ? { ...item, unreadMessages: 0 } : item));
       }
     } catch (e) {
       console.error(e);
@@ -185,19 +198,52 @@ export default function MessagesPage() {
     return String(val);
   };
 
+  const clearRemoteTyping = (userId: string) => {
+    const timer = remoteTypingTimersRef.current.get(userId);
+    if (timer) clearTimeout(timer);
+    remoteTypingTimersRef.current.delete(userId);
+    setTypingUsers((previous) => { const next = { ...previous }; delete next[userId]; return next; });
+  };
+
+  const stopLocalTyping = () => {
+    if (localTypingStopTimerRef.current) clearTimeout(localTypingStopTimerRef.current);
+    localTypingStopTimerRef.current = null;
+    if (!localTypingActiveRef.current) return;
+    localTypingActiveRef.current = false;
+    typingChannelRef.current?.publish('typing.stop', {}).catch(() => {});
+  };
+
+  const handleComposerChange = (value: string) => {
+    setInputText(value);
+    if (!value.trim()) { stopLocalTyping(); return; }
+    if (!localTypingActiveRef.current) {
+      localTypingActiveRef.current = true;
+      typingChannelRef.current?.publish('typing.start', {}).catch(() => {});
+    }
+    if (localTypingStopTimerRef.current) clearTimeout(localTypingStopTimerRef.current);
+    localTypingStopTimerRef.current = setTimeout(stopLocalTyping, 1800);
+  };
+
   const handleIncomingMessage = (incoming: IMessage) => {
     if (!incoming || !incoming.content) return;
     const incId = parseId(incoming._id);
     const incConvId = parseId(incoming.conversationId);
     const activeId = parseId(activeConvRef.current?._id);
+    clearRemoteTyping(parseId(incoming.senderId));
+    const isActiveConversation = Boolean(activeId && activeId === incConvId);
 
     // 1. If currently open conversation matches incoming message, append immediately
-    if (activeId && activeId === incConvId) {
+    if (isActiveConversation) {
       setMessages((previous) => {
+        const optimisticIndex = previous.findIndex((m) => m.clientTempId && m.clientTempId === incoming.clientTempId);
+        if (optimisticIndex >= 0) {
+          const next = [...previous]; next[optimisticIndex] = incoming; return next;
+        }
         const exists = previous.some((m) => parseId(m._id) === incId);
         if (exists) return previous;
         return [...previous, incoming];
       });
+      void markConversationRead(incConvId);
     }
 
     // 2. Always update the conversations list (latest message preview + timestamp) and re-sort
@@ -210,7 +256,7 @@ export default function MessagesPage() {
       return previous
         .map((c) =>
           parseId(c._id) === incConvId
-            ? { ...c, lastMessage: incoming.content, lastMessageAt: incoming.createdAt || new Date().toISOString() }
+            ? { ...c, lastMessage: incoming.content, lastMessageAt: incoming.createdAt || new Date().toISOString(), unreadMessages: isActiveConversation ? 0 : (incoming.unreadMessages ?? c.unreadMessages ?? 0) }
             : c
         )
         .sort(
@@ -218,6 +264,14 @@ export default function MessagesPage() {
             new Date(b.lastMessageAt || 0).getTime() - new Date(a.lastMessageAt || 0).getTime()
         );
     });
+  };
+
+  const markConversationRead = async (conversationId: string) => {
+    try {
+      const response = await fetch('/api/messages', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ conversationId }) });
+      if (!response.ok) return;
+      setConversations((previous) => previous.map((conversation) => parseId(conversation._id) === conversationId ? { ...conversation, unreadMessages: 0 } : conversation));
+    } catch {}
   };
 
   // 1. Ably channel subscription for the active open conversation
@@ -228,20 +282,50 @@ export default function MessagesPage() {
     try {
       realtime = new Ably.Realtime({ authUrl: '/api/realtime/token', authMethod: 'GET' });
       const channel = realtime.channels.get(`conversation:${convId}`);
+      typingChannelRef.current = channel;
       const onMessage = (event: { data?: unknown }) => {
         if (event.data) {
           handleIncomingMessage(event.data as IMessage);
         }
       };
+      const onRead = (event: { data?: { conversationId?: string } }) => {
+        const id = event.data?.conversationId;
+        if (id) setConversations((previous) => previous.map((conversation) => parseId(conversation._id) === id ? { ...conversation, unreadMessages: 0 } : conversation));
+      };
+      const onTypingStart = (event: { clientId?: string }) => {
+        const userId = parseId(event.clientId);
+        if (!userId || userId === currentUserId) return;
+        const participant = activeConvRef.current?.participants.find((item) => parseId(item._id) === userId);
+        if (!participant) return;
+        const priorTimer = remoteTypingTimersRef.current.get(userId);
+        if (priorTimer) clearTimeout(priorTimer);
+        setTypingUsers((previous) => ({ ...previous, [userId]: { name: participant.fullName || participant.name || 'Someone', avatarUrl: participant.profilePhoto || participant.avatarUrl } }));
+        remoteTypingTimersRef.current.set(userId, setTimeout(() => clearRemoteTyping(userId), 2600));
+      };
+      const onTypingStop = (event: { clientId?: string }) => {
+        const userId = parseId(event.clientId);
+        if (userId && userId !== currentUserId) clearRemoteTyping(userId);
+      };
       channel.subscribe('message.created', onMessage);
+      channel.subscribe('conversation.read', onRead);
+      channel.subscribe('typing.start', onTypingStart);
+      channel.subscribe('typing.stop', onTypingStop);
       return () => {
+        stopLocalTyping();
+        setTypingUsers({});
+        remoteTypingTimersRef.current.forEach((timer) => clearTimeout(timer));
+        remoteTypingTimersRef.current.clear();
+        if (typingChannelRef.current === channel) typingChannelRef.current = null;
         channel.unsubscribe('message.created', onMessage);
+        channel.unsubscribe('conversation.read', onRead);
+        channel.unsubscribe('typing.start', onTypingStart);
+        channel.unsubscribe('typing.stop', onTypingStop);
         realtime?.close();
       };
     } catch (e) {
       console.error('Ably conversation subscription error:', e);
     }
-  }, [activeConv?._id]);
+  }, [activeConv?._id, currentUserId]);
 
   // 2. Global realtime event listener (for user channel messages)
   useEffect(() => {
@@ -249,11 +333,37 @@ export default function MessagesPage() {
       const detail = (e as CustomEvent).detail;
       if (detail?.name === 'message.created' && detail?.data) {
         handleIncomingMessage(detail.data as IMessage);
+      } else if (detail?.name === 'conversation.read' && detail?.data?.conversationId) {
+        const id = String(detail.data.conversationId);
+        setConversations((previous) => previous.map((conversation) => parseId(conversation._id) === id ? { ...conversation, unreadMessages: 0 } : conversation));
       }
     };
     window.addEventListener('aptivo:realtime-event', handleRealtime);
     return () => window.removeEventListener('aptivo:realtime-event', handleRealtime);
   }, []);
+
+  // The per-user channel updates previews/unread ordering when a conversation is not open.
+  useEffect(() => {
+    if (!currentUserId) return;
+    const realtime = new Ably.Realtime({ authUrl: '/api/realtime/token', authMethod: 'GET' });
+    const channel = realtime.channels.get(`user:${currentUserId}`);
+    const onMessage = (event: { data?: unknown }) => { if (event.data) handleIncomingMessage(event.data as IMessage); };
+    channel.subscribe('message.created', onMessage);
+    const onRead = (event: { data?: { conversationId?: string } }) => {
+      const id = event.data?.conversationId;
+      if (id) setConversations((previous) => previous.map((conversation) => parseId(conversation._id) === id ? { ...conversation, unreadMessages: 0 } : conversation));
+    };
+    channel.subscribe('conversation.read', onRead);
+    const reconcile = () => {
+      if (currentUserEmail) loadConversations(currentUserEmail, currentUserId);
+      if (activeConvRef.current?._id && currentUserEmail) {
+        fetch(`/api/messages?conversationId=${activeConvRef.current._id}&email=${encodeURIComponent(currentUserEmail)}`)
+          .then((response) => response.json()).then((data) => data.messages && setMessages(data.messages)).catch(() => {});
+      }
+    };
+    realtime.connection.on('connected', reconcile);
+    return () => { realtime.connection.off('connected', reconcile); channel.unsubscribe('message.created', onMessage); channel.unsubscribe('conversation.read', onRead); realtime.close(); };
+  }, [currentUserId, currentUserEmail]);
 
   // 3. Focus/reconnect reconciliation from MongoDB source-of-truth
   useEffect(() => {
@@ -280,11 +390,28 @@ export default function MessagesPage() {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputText.trim() || !activeConv || sending) return;
+    if (!inputText.trim() || !activeConv) return;
 
     const content = inputText.trim();
+    stopLocalTyping();
+    const clientTempId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const optimisticMessage: IMessage = {
+      _id: `temp:${clientTempId}`,
+      clientTempId,
+      conversationId: String(activeConv._id),
+      senderId: currentUserId,
+      recipientId: '',
+      content,
+      isRead: false,
+      createdAt: new Date().toISOString(),
+      deliveryState: 'sending',
+    };
     setInputText('');
     setSending(true);
+    setMessages((previous) => [...previous, optimisticMessage]);
+    setConversations((previous) => previous
+      .map((conversation) => conversation._id === activeConv._id ? { ...conversation, lastMessage: content, lastMessageAt: optimisticMessage.createdAt } : conversation)
+      .sort((a, b) => new Date(b.lastMessageAt || 0).getTime() - new Date(a.lastMessageAt || 0).getTime()));
 
     const other = activeConv.participants.find(
       (p) => p._id?.toString() !== currentUserId && p.email !== currentUserEmail
@@ -299,22 +426,18 @@ export default function MessagesPage() {
           senderEmail: currentUserEmail,
           recipientId: other?._id,
           content,
+          clientTempId,
         }),
       });
       const data = await res.json();
       if (data.success && data.message) {
-        setMessages((prev) => [...prev, data.message]);
-        // Update local last message
-        setConversations((prev) =>
-          prev.map((c) =>
-            c._id === activeConv._id
-              ? { ...c, lastMessage: content, lastMessageAt: new Date().toISOString() }
-              : c
-          )
-        );
+        setMessages((previous) => previous.map((message) => message.clientTempId === clientTempId ? data.message : message));
+      } else {
+        setMessages((previous) => previous.map((message) => message.clientTempId === clientTempId ? { ...message, deliveryState: 'failed' } : message));
       }
     } catch (e) {
       console.error(e);
+      setMessages((previous) => previous.map((message) => message.clientTempId === clientTempId ? { ...message, deliveryState: 'failed' } : message));
     } finally {
       setSending(false);
     }
@@ -391,6 +514,7 @@ export default function MessagesPage() {
                 const partner = getOtherParticipant(conv);
                 const displayName = partner?.fullName || partner?.name || 'Builder';
                 const isSelected = activeConv?._id === conv._id;
+                const unread = conv.unreadMessages || 0;
                 return (
                   <button key={conv._id} onClick={() => selectConversation(conv)}
                     className={`flex w-full items-center gap-3 px-5 py-3.5 text-left transition-colors border-b border-[#E4E7E2]/60 ${isSelected ? 'bg-[#E4EEE8]/50' : 'hover:bg-[#F7F6F1]'}`}
@@ -398,10 +522,10 @@ export default function MessagesPage() {
                     <Avatar src={partner?.profilePhoto || partner?.avatarUrl} name={displayName} size={44} />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="truncate text-[14px] font-semibold text-[#18201C] font-sans">{displayName}</span>
+                        <span className={`truncate text-[14px] text-[#18201C] font-sans ${unread ? 'font-bold' : 'font-semibold'}`}>{displayName}</span>
                         <span className="shrink-0 text-[11px] text-[#69736D] font-sans">{formatTime(conv.lastMessageAt)}</span>
                       </div>
-                      <p className="mt-0.5 truncate text-[12px] text-[#69736D] font-sans">{conv.lastMessage || 'Start a conversation'}</p>
+                      <div className="mt-0.5 flex items-center gap-2"><p className={`min-w-0 flex-1 truncate text-[12px] font-sans ${unread ? 'font-semibold text-[#18201C]' : 'text-[#69736D]'}`}>{conv.lastMessage || 'Start a conversation'}</p>{unread > 0 && <span className="grid h-5 min-w-5 place-items-center rounded-full bg-[#E86F51] px-1 text-[10px] font-bold text-white">{unread > 9 ? '9+' : unread}</span>}</div>
                     </div>
                   </button>
                 );
@@ -452,16 +576,18 @@ export default function MessagesPage() {
                         <span className="text-[10px] text-[#69736D] mt-1 px-1 font-sans">
                           {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
+                        {msg.deliveryState && <span className={msg.deliveryState === 'failed' ? 'px-1 text-[10px] text-rose-700' : 'px-1 text-[10px] text-[#69736D]'}>{msg.deliveryState === 'failed' ? 'Failed to send' : 'Sending…'}</span>}
                       </div>
                     );
                   })
                 )}
+                {Object.entries(typingUsers).map(([userId, typer]) => <div key={userId} className="flex items-end gap-2 pt-1"><Avatar src={typer.avatarUrl} name={typer.name} size={26}/><div className="flex items-center gap-1 rounded-2xl rounded-bl-md border border-[#E4E7E2] bg-white px-3 py-2" aria-label={`${typer.name} is typing`}><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#69736D]"/><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#69736D] [animation-delay:150ms]"/><span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#69736D] [animation-delay:300ms]"/></div></div>)}
                 <div ref={messagesEndRef} />
               </div>
 
               {/* Composer */}
               <form onSubmit={handleSendMessage} className="flex items-center gap-2 border-t border-[#E4E7E2] bg-white px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-                <input type="text" value={inputText} onChange={(e) => setInputText(e.target.value)} placeholder="Message…" className="aptivo-input min-h-11 flex-1 rounded-full px-5 text-[14px] font-sans" />
+                <input type="text" value={inputText} onChange={(e) => handleComposerChange(e.target.value)} placeholder="Message…" className="aptivo-input min-h-11 flex-1 rounded-full px-5 text-[14px] font-sans" />
                 <button type="submit" disabled={!inputText.trim() || sending} className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#174D3A] text-white transition hover:bg-[#287A5B] disabled:opacity-40">
                   <Send className="w-[18px] h-[18px]" />
                 </button>

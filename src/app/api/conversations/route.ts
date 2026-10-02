@@ -11,8 +11,10 @@ const USER_FIELDS = '_id fullName name email role avatarUrl profilePhoto univers
 export async function GET() {
   try {
     const actor = await requireUser(); await connectToDatabase();
-    const conversations = await Conversation.find({ participants: actor._id }).populate('participants', USER_FIELDS).populate('lastSenderId', USER_FIELDS).sort({ lastMessageAt: -1 });
-    return NextResponse.json({ conversations });
+    const conversations = await Conversation.find({ participants: actor._id }).populate('participants', USER_FIELDS).populate('lastSenderId', USER_FIELDS).sort({ lastMessageAt: -1 }).lean();
+    const actorId = String(actor._id);
+    const mapped = conversations.map((conversation: any) => ({ ...conversation, unreadMessages: Number(conversation.unreadCount?.[actorId] || 0) }));
+    return NextResponse.json({ conversations: mapped, totalUnreadMessages: mapped.reduce((sum: number, conversation: any) => sum + conversation.unreadMessages, 0) });
   } catch (error) {
     const auth = authError(error); return NextResponse.json(auth || { error: (error as Error).message }, { status: auth?.status || 500 });
   }

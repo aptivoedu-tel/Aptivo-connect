@@ -43,7 +43,6 @@ export default function Sidebar() {
     { name: 'Chats', href: '/dashboard/messages', icon: MessageSquare },
     { name: 'Profile', href: '/dashboard/profile', icon: User },
     { name: 'Showcase', href: '/showcase', icon: Award, badge: 'Builds' },
-    { name: 'Ambassador', href: '/dashboard/ambassador', icon: Radio, badge: 'Apply' },
   ];
 
   return (

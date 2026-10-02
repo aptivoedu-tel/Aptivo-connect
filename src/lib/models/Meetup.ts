@@ -24,7 +24,7 @@ export interface IMeetup extends Document {
   capacity: number;
   registrationDeadline?: string;
   eligibility?: string;
-  status: 'draft' | 'published' | 'registration-closed' | 'completed' | 'cancelled';
+  status: 'draft' | 'published' | 'registration-closed' | 'completed' | 'cancelled' | 'hidden';
   registrations: Array<{ studentId: mongoose.Types.ObjectId; studentName: string; studentEmail: string; answers?: Record<string, string>; registeredAt: Date; attendance: 'registered' | 'attended' | 'absent' }>;
 }
 
@@ -35,7 +35,7 @@ const MeetupSchema = new Schema<IMeetup>({
   format: { type: String, enum: ['online', 'in-person', 'hybrid'], required: true }, date: { type: String, required: true }, startTime: { type: String, required: true }, endTime: { type: String, required: true }, timezone: { type: String, default: 'Asia/Karachi' },
   venueName: String, venueAddress: String, venueCity: String, platform: String, onlineLink: String,
   capacity: { type: Number, required: true, min: 1 }, registrationDeadline: String, eligibility: String,
-  status: { type: String, enum: ['draft', 'published', 'registration-closed', 'completed', 'cancelled'], default: 'draft', index: true },
+  status: { type: String, enum: ['draft', 'published', 'registration-closed', 'completed', 'cancelled', 'hidden'], default: 'draft', index: true },
   registrations: [{ studentId: { type: Schema.Types.ObjectId, ref: 'User' }, studentName: String, studentEmail: String, answers: Schema.Types.Mixed, registeredAt: { type: Date, default: Date.now }, attendance: { type: String, enum: ['registered', 'attended', 'absent'], default: 'registered' } }],
 }, { timestamps: true });
 

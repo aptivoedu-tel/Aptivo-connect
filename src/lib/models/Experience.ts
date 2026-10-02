@@ -34,7 +34,7 @@ export interface IExperience extends Document {
   deadline: string;
   image: string;
   posterUrl?: string;
-  status: 'Upcoming' | 'Ongoing' | 'Completed';
+  status: 'Upcoming' | 'Ongoing' | 'Completed' | 'Hidden';
   questionnaire: IExperienceQuestion[];
   enrolledStudents: IEnrolledStudent[];
   createdAt: Date;
@@ -59,7 +59,7 @@ const ExperienceSchema: Schema<IExperience> = new Schema(
     posterUrl: { type: String },
     status: {
       type: String,
-      enum: ['Upcoming', 'Ongoing', 'Completed'],
+      enum: ['Upcoming', 'Ongoing', 'Completed', 'Hidden'],
       default: 'Upcoming',
       index: true,
     },

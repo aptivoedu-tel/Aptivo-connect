@@ -13,10 +13,11 @@ export const userChannel = (userId: string | mongoose.Types.ObjectId) => `user:$
 
 export async function createRealtimeToken(clientId: string, channels: string[] = []) {
   const capability: Record<string, string[]> = {
-    [userChannel(clientId)]: ['subscribe', 'publish'],
-    'conversation:*': ['subscribe', 'publish'],
+    [userChannel(clientId)]: ['subscribe'],
   };
   channels.forEach((ch) => {
+    // Clients can emit only ephemeral typing events on their server-authorized
+    // conversation channels. Persisted messages still go through the API.
     capability[ch] = ['subscribe', 'publish'];
   });
 

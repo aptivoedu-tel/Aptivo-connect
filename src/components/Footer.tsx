@@ -62,11 +62,6 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/dashboard/ambassador" className="hover:text-white transition-colors">
-                  Ambassador Portal
-                </Link>
-              </li>
-              <li>
                 <Link href="/dashboard/profile" className="hover:text-white transition-colors">
                   Student Identity
                 </Link>

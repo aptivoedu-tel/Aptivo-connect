@@ -21,8 +21,6 @@ const ConversationSchema: Schema<IConversation> = new Schema(
   { timestamps: true }
 );
 
-// Compound index on participants
-ConversationSchema.index({ participants: 1 });
 ConversationSchema.index({ lastMessageAt: -1 });
 
 const Conversation: Model<IConversation> =

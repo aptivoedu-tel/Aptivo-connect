@@ -13,7 +13,8 @@ export async function GET(req: Request) {
     const city = searchParams.get('city');
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const query: any = {};
+    const query: any = { status: { $ne: 'Hidden' } };
+    if (searchParams.get('status')?.toLowerCase() === 'all') { await requireAdmin(); delete query.status; }
     if (category && category.toLowerCase() !== 'all') query.category = category;
     if (city && city.toLowerCase() !== 'all') query.city = city;
 
@@ -90,8 +91,11 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ error: 'ID is required' }, { status: 400 });
     }
 
-    await Experience.findByIdAndDelete(id);
-    return NextResponse.json({ success: true });
+    const experience = await Experience.findById(id);
+    if (!experience) return NextResponse.json({ error: 'Experience not found' }, { status: 404 });
+    if ((experience.enrolledStudents?.length || 0) > 0) { experience.status = 'Hidden'; await experience.save(); return NextResponse.json({ success: true, archived: true }); }
+    await experience.deleteOne();
+    return NextResponse.json({ success: true, archived: false });
   } catch (error: unknown) {
     const auth = authError(error); return NextResponse.json(auth || { error: (error as Error).message }, { status: auth?.status || 500 });
   }

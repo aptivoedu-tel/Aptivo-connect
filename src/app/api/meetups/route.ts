@@ -29,7 +29,7 @@ export async function PATCH(req: Request) {
   catch (error) { const auth = authError(error); return NextResponse.json(auth || { error: (error as Error).message }, { status: auth?.status || 500 }); }
 }
 
-export async function DELETE(req: Request) { try { await requireAdmin(); await connectToDatabase(); const id = new URL(req.url).searchParams.get('id'); if (!id) return NextResponse.json({ error: 'ID is required.' }, { status: 400 }); await Meetup.findByIdAndDelete(id); return NextResponse.json({ success: true }); } catch (error) { const auth = authError(error); return NextResponse.json(auth || { error: (error as Error).message }, { status: auth?.status || 500 }); } }
+export async function DELETE(req: Request) { try { await requireAdmin(); await connectToDatabase(); const id = new URL(req.url).searchParams.get('id'); if (!id) return NextResponse.json({ error: 'ID is required.' }, { status: 400 }); const meetup = await Meetup.findById(id); if (!meetup) return NextResponse.json({ error: 'Meetup not found.' }, { status: 404 }); if ((meetup.registrations?.length || 0) > 0) { meetup.status = 'hidden'; await meetup.save(); return NextResponse.json({ success: true, archived: true }); } await meetup.deleteOne(); return NextResponse.json({ success: true, archived: false }); } catch (error) { const auth = authError(error); return NextResponse.json(auth || { error: (error as Error).message }, { status: auth?.status || 500 }); } }
 
 export async function PUT(req: Request) {
   try { const student = await requireUser(); await connectToDatabase(); const { meetupId, answers } = await req.json(); const meetup = await Meetup.findById(meetupId);

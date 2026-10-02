@@ -327,14 +327,12 @@ export default function AdminPortal() {
   const loadAllData = async () => {
     setLoading(true);
     try {
-      const [statsRes, projRes, meetRes, expRes, usersRes, ambassadorRes, campusDemandRes] = await Promise.all([
+      const [statsRes, projRes, meetRes, expRes, usersRes] = await Promise.all([
         fetch('/api/stats').then((r) => r.json()).catch(() => ({})),
         fetch('/api/build?status=all').then((r) => r.json()).catch(() => ({})),
         fetch('/api/meetups?status=all').then((r) => r.json()).catch(() => ({})),
         fetch('/api/experience').then((r) => r.json()).catch(() => ({})),
         fetch('/api/people?limit=100').then((r) => r.json()).catch(() => ({})),
-        fetch('/api/ambassador/applications?status=all').then((r) => r.json()).catch(() => ({})),
-        fetch('/api/admin/campus-demand').then((r) => r.json()).catch(() => ({})),
       ]);
 
       if (statsRes.stats) {
@@ -354,8 +352,6 @@ export default function AdminPortal() {
       if (meetRes.meetups) setMeetups(meetRes.meetups);
       if (expRes.experiences) setExperiences(expRes.experiences);
       if (usersRes.users) setUsersList(usersRes.users);
-      if (ambassadorRes.applications) setAmbassadorApplications(ambassadorRes.applications);
-      if (campusDemandRes.demands) setCampusDemands(campusDemandRes.demands);
     } catch (e) {
       console.error('Error loading admin data:', e);
     } finally {
@@ -554,11 +550,10 @@ export default function AdminPortal() {
 
   const navTabs = [
     { id: 'overview', label: 'Overview', icon: LayoutDashboard },
-    { id: 'campus', label: 'Campus & Needs', icon: Building, badge: campusDemands.filter((d) => d.status === 'Reported').length || undefined },
+    { id: 'campus', label: 'Campus', icon: Building },
     { id: 'build', label: 'BUILD Projects', icon: Hammer, badge: stats.pendingProjectsCount || undefined },
     { id: 'meetup', label: 'MEETUP Sessions', icon: Users },
     { id: 'experience', label: 'EXPERIENCE Labs', icon: Building2 },
-    { id: 'ambassador', label: 'Ambassador', icon: Radio },
     { id: 'showcase', label: 'Showcase', icon: Award },
     { id: 'users', label: 'Users Directory', icon: UserCheck },
     { id: 'notifications', label: 'Notifications Hub', icon: Bell },
@@ -619,7 +614,7 @@ export default function AdminPortal() {
 
       {/* Main Admin Workspace */}
       <div className="flex-1 flex flex-col lg:flex-row p-3 sm:p-6 gap-6 max-w-7xl mx-auto w-full">
-        {mobileMenuOpen && <div className="lg:hidden bg-white rounded-3xl p-3 border border-slate-200 shadow-soft grid grid-cols-2 gap-2">{navTabs.map((tab) => { const Icon = tab.icon; return <button key={tab.id} onClick={() => { setActiveTab(tab.id as AdminTab); setMobileMenuOpen(false); }} className={`min-h-11 flex items-center gap-2 rounded-xl px-3 text-xs font-bold ${activeTab === tab.id ? 'bg-slate-900 text-white' : 'bg-slate-50 text-slate-700'}`}><Icon className="w-4 h-4" />{tab.label}</button>; })}</div>}
+        {mobileMenuOpen && <div className="lg:hidden bg-white rounded-3xl p-3 border border-slate-200 shadow-soft grid grid-cols-2 gap-2">{navTabs.map((tab) => { const Icon = tab.icon; return <button key={tab.id} onClick={() => { if (tab.id === 'campus') window.location.assign('/admin/campus'); else setActiveTab(tab.id as AdminTab); setMobileMenuOpen(false); }} className={`min-h-11 flex items-center gap-2 rounded-xl px-3 text-xs font-bold ${activeTab === tab.id ? 'bg-slate-900 text-white' : 'bg-slate-50 text-slate-700'}`}><Icon className="w-4 h-4" />{tab.label}</button>; })}</div>}
         {/* Navigation Sidebar */}
         <aside className="hidden lg:block w-64 shrink-0 bg-white rounded-3xl p-4 border border-slate-200/80 shadow-soft self-start space-y-1">
           <div className="px-3 py-2 text-[10px] uppercase font-bold tracking-wider text-slate-400">
@@ -631,7 +626,7 @@ export default function AdminPortal() {
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as AdminTab)}
+                onClick={() => { if (tab.id === 'campus') window.location.assign('/admin/campus'); else setActiveTab(tab.id as AdminTab); }}
                 className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all ${
                   isSel
                     ? 'bg-slate-900 text-white shadow-sm'

@@ -6,7 +6,6 @@ import Project from '@/lib/models/Project';
 import Experience from '@/lib/models/Experience';
 
 import ProjectApplication from '@/lib/models/ProjectApplication';
-import AmbassadorApplication from '@/lib/models/AmbassadorApplication';
 import { authError, requireAdmin } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
@@ -27,7 +26,6 @@ export async function GET() {
           experiencesCount: 0,
           accessEventsCount: 0,
           pendingApplicationsCount: 0,
-          pendingAmbassadorsCount: 0,
         },
       });
     }
@@ -42,7 +40,6 @@ export async function GET() {
       experiencesCount,
       accessEventsCount,
       pendingApplicationsCount,
-      pendingAmbassadorsCount,
     ] = await Promise.all([
       User.countDocuments({ role: 'student' }),
       User.countDocuments({ role: 'professional' }),
@@ -53,7 +50,6 @@ export async function GET() {
       Experience.countDocuments(),
       0,
       ProjectApplication.countDocuments({ status: 'Applied' }),
-      AmbassadorApplication.countDocuments({ status: { $in: ['Submitted', 'Under Review'] } }),
     ]);
 
     return NextResponse.json({
@@ -67,7 +63,6 @@ export async function GET() {
         experiencesCount,
         accessEventsCount,
         pendingApplicationsCount,
-        pendingAmbassadorsCount,
       },
     });
   } catch (error: unknown) { const auth = authError(error); return NextResponse.json(auth || { error: (error as Error).message }, { status: auth?.status || 500 }); }

@@ -22,6 +22,8 @@ export interface NotificationPayload {
   message: string;
   details?: Record<string, string | number>;
   link?: string;
+  conversationId?: string | mongoose.Types.ObjectId;
+  isRead?: boolean;
   type?: 'meetup' | 'meet' | 'build' | 'experience' | 'access' | 'link' | 'system';
 }
 
@@ -64,7 +66,8 @@ export class NotificationEngine {
       message: payload.message,
       type: payload.type || 'system',
       link: payload.link || '/dashboard',
-      isRead: false,
+      conversationId: payload.conversationId,
+      isRead: payload.isRead === true,
     });
 
     // 1b. Publish Ably Realtime Notification Event

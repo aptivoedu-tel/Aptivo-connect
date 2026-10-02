@@ -117,19 +117,27 @@ export async function PATCH(req: Request) {
   try {
     const actor = await requireUser(); await connectToDatabase();
     const body = await req.json();
-    const { id, status, isAptivoVerified, showcase, milestones } = body;
+    const { id, status, isAptivoVerified, showcase, milestones, ...requestedUpdates } = body;
 
     const project = await Project.findById(id);
     if (!project) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
 
+    const owner = String(project.ownerId) === String(actor._id);
     if (status) {
-      if (actor.role !== 'admin') return NextResponse.json({ error: 'Only an administrator can change project publication status.' }, { status: 403 });
+      const ownerAllowed = ['Hidden', 'Archived', 'Pending'].includes(status);
+      if (actor.role !== 'admin' && (!owner || !ownerAllowed)) return NextResponse.json({ error: 'Only the owner may hide/archive this project.' }, { status: 403 });
       project.status = status;
     }
     if (isAptivoVerified !== undefined) { if (actor.role !== 'admin') return NextResponse.json({ error: 'Only an administrator can verify a project.' }, { status: 403 }); project.isAptivoVerified = isAptivoVerified; }
-    if (milestones) { if (project.ownerId.toString() !== actor._id.toString() && actor.role !== 'admin') return NextResponse.json({ error: 'Only the project owner can update milestones.' }, { status: 403 }); project.milestones = milestones; }
+    if (milestones) { if (!owner && actor.role !== 'admin') return NextResponse.json({ error: 'Only the project owner can update milestones.' }, { status: 403 }); project.milestones = milestones; }
+    const editable = ['title', 'problem', 'building', 'description', 'field', 'requiredSkills', 'teamSize', 'duration', 'mode', 'location', 'coverImage'];
+    const suppliedEditable = Object.keys(requestedUpdates).filter((key) => editable.includes(key));
+    if (suppliedEditable.length) {
+      if (!owner && actor.role !== 'admin') return NextResponse.json({ error: 'Only the project owner can edit this project.' }, { status: 403 });
+      suppliedEditable.forEach((key) => { (project as any)[key] = requestedUpdates[key]; });
+    }
     if (showcase) {
       if (project.ownerId.toString() !== actor._id.toString() && actor.role !== 'admin') return NextResponse.json({ error: 'Only the project owner can submit a showcase.' }, { status: 403 });
       project.showcase = {
@@ -158,4 +166,17 @@ export async function PATCH(req: Request) {
   } catch (error: unknown) {
     const auth = authError(error); return NextResponse.json(auth || { error: (error as Error).message }, { status: auth?.status || 500 });
   }
+}
+
+export async function DELETE(req: Request) {
+  try {
+    const actor = await requireUser(); await connectToDatabase();
+    const id = new URL(req.url).searchParams.get('id');
+    const project = id ? await Project.findById(id) : null;
+    if (!project) return NextResponse.json({ error: 'Project not found.' }, { status: 404 });
+    if (actor.role !== 'admin' && String(project.ownerId) !== String(actor._id)) return NextResponse.json({ error: 'Only the project owner can remove this project.' }, { status: 403 });
+    if ((project.members?.length || 0) > 1) { project.status = 'Archived'; await project.save(); return NextResponse.json({ success: true, archived: true, project }); }
+    await project.deleteOne();
+    return NextResponse.json({ success: true, archived: false });
+  } catch (error) { const auth = authError(error); return NextResponse.json(auth || { error: (error as Error).message }, { status: auth?.status || 500 }); }
 }

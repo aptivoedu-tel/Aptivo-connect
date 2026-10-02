@@ -6,6 +6,7 @@ export interface INotification extends Document {
   message: string;
   type: 'meetup' | 'meet' | 'build' | 'experience' | 'access' | 'system';
   link?: string;
+  conversationId?: mongoose.Types.ObjectId;
   isRead: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -22,6 +23,7 @@ const NotificationSchema: Schema<INotification> = new Schema(
       default: 'system',
     },
     link: { type: String },
+    conversationId: { type: Schema.Types.ObjectId, ref: 'Conversation', index: true },
     isRead: { type: Boolean, default: false, index: true },
   },
   { timestamps: true }

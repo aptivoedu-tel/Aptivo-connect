@@ -10,6 +10,7 @@ import {
   Code,
   Tag,
   Search,
+  MoreHorizontal,
 } from 'lucide-react';
 import StatusPill from '@/components/StatusPill';
 import MediaImage from '@/components/MediaImage';
@@ -40,6 +41,7 @@ interface IProject {
   status: string;
   isAptivoVerified: boolean;
   coverImage?: string;
+  ownerId?: string;
 }
 
 export default function BuildPage() {
@@ -63,6 +65,8 @@ export default function BuildPage() {
   const [duration, setDuration] = useState('6 weeks');
   const [mode, setMode] = useState('Remote');
   const [submittingCreate, setSubmittingCreate] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState('');
+  const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
 
   // Apply Form State
   const [whyJoin, setWhyJoin] = useState('');
@@ -91,7 +95,7 @@ export default function BuildPage() {
     if (typeof window !== 'undefined') {
       try {
         const stored = JSON.parse(localStorage.getItem('aptivo_user') || '{}');
-        email = stored.email || '';
+        email = stored.email || ''; setCurrentUserId(stored._id || '');
       } catch {}
     }
     if (email) {
@@ -132,10 +136,10 @@ export default function BuildPage() {
         .filter(Boolean);
 
       const res = await fetch('/api/build', {
-        method: 'POST',
+        method: editingProjectId ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ownerEmail: email,
+          ...(editingProjectId ? { id: editingProjectId } : { ownerEmail: email }),
           title,
           problem,
           building,
@@ -149,7 +153,7 @@ export default function BuildPage() {
       });
       const data = await res.json();
       if (data.success) {
-        setIsCreateModalOpen(false);
+        setIsCreateModalOpen(false); setEditingProjectId(null);
         setTitle('');
         setProblem('');
         setBuilding('');
@@ -254,6 +258,14 @@ export default function BuildPage() {
   const displayProjects = getFilteredByTab();
 
   const isRecruiting = (proj: IProject) => proj.status === 'recruiting' || (proj.teamSize && (proj.members?.length || 0) < proj.teamSize);
+  const manageProject = async (project: IProject, action: 'hide' | 'republish' | 'delete') => {
+    if (action === 'delete' && !window.confirm('Delete this project? Projects with members are archived to protect their history.')) return;
+    const response = await fetch(action === 'delete' ? `/api/build?id=${project._id}` : '/api/build', { method: action === 'delete' ? 'DELETE' : 'PATCH', headers: { 'Content-Type': 'application/json' }, body: action === 'delete' ? undefined : JSON.stringify({ id: project._id, status: action === 'hide' ? 'Hidden' : 'Pending' }) });
+    const data = await response.json();
+    if (!response.ok) { alert(data.error || 'Unable to update this project.'); return; }
+    fetchProjects();
+  };
+  const editProject = (project: IProject) => { setEditingProjectId(project._id); setTitle(project.title); setProblem(project.problem); setBuilding(project.building); setDescription(project.description); setField(project.field); setSkillsInput((project.requiredSkills || []).join(', ')); setTeamSize(project.teamSize); setDuration(project.duration); setMode(project.mode); setIsCreateModalOpen(true); };
 
   return (
     <div className="space-y-5">
@@ -312,6 +324,7 @@ export default function BuildPage() {
 
               {/* Content */}
               <div className="flex flex-1 flex-col p-4 pt-3.5 space-y-3">
+                {String(proj.ownerId) === currentUserId && <details className="relative self-end -mb-6"><summary className="grid h-8 w-8 cursor-pointer place-items-center rounded-full text-[#69736D] hover:bg-[#F7F6F1]"><MoreHorizontal className="h-4 w-4"/></summary><div className="absolute right-0 top-9 z-10 w-36 rounded-xl border border-[#E4E7E2] bg-white p-1 text-xs shadow-lg"><button onClick={() => editProject(proj)} className="block w-full rounded-lg px-3 py-2 text-left hover:bg-[#F7F6F1]">Edit project</button><button onClick={() => manageProject(proj, proj.status === 'Hidden' ? 'republish' : 'hide')} className="block w-full rounded-lg px-3 py-2 text-left hover:bg-[#F7F6F1]">{proj.status === 'Hidden' ? 'Republish' : 'Hide project'}</button><button onClick={() => manageProject(proj, 'delete')} className="block w-full rounded-lg px-3 py-2 text-left text-rose-700 hover:bg-rose-50">Delete / archive</button></div></details>}
                 <h4 className="font-sans font-semibold text-[15px] leading-[1.3] text-[#18201C] line-clamp-2">{proj.title}</h4>
                 <p className="line-clamp-2 text-[13px] leading-relaxed text-[#69736D] font-sans">{proj.building || proj.problem}</p>
 
